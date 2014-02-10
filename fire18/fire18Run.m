@@ -86,7 +86,7 @@ global g;
 g.nextFrI=1;
 g.FramesInVM=0;
 
-g.nQ=1;
+g.nQ=0;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
 g.allTrialParamsArray(1400)=fireScheduleTrial(allTrialParams(1,:));
@@ -418,10 +418,12 @@ end
 function nQ=EnqueueFrame(n)
 global g;
 g.nQ=g.nQ+1;
+%G.nQ is the number in the queue at the moment. It starts at 0
 %g.FrameNumsQ=[g.FrameNumsQ n];
-g.FrameNumsQ(g.nQ+1)=n;
+g.FrameNumsQ(g.nQ)=n;
  %Append produces a row vec
 nQ=g.nQ;
+
 end
 
 
@@ -742,6 +744,7 @@ if ~g.debugMode
 else
     g.subjectName='test';
 end
+checkDir('output\');
 g.logFileName=[g.subjectName '_log.txt'];
 g.logFileID=fopen(['output\' g.logFileName],'w');
 assert(g.logFileID ~= -1); %Check file is really open
@@ -844,7 +847,7 @@ end
 function firePause(s)
 %Log a string to the logfile for this experiment
 global g;
-if ~g.sim
+if ~g.sim 
     pause(s);
 end
 
@@ -1243,6 +1246,15 @@ z=repmat(x,1,size(y,2));
 for i=1:size(z,2)
     z(rowsx+1,i)=y(ceil(i/sx)); %Cunning
 end
+end
+
+function [  ] = checkDir( d )
+%UNTITLED3 Summary of this function goes here
+%   Detailed explanation goes here
+if ~isdir(d)
+    mkdir(d);
+end
+
 end
 
 
