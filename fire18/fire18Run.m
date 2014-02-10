@@ -470,6 +470,7 @@ while g.FramesInVM<g.maxFramesInVM
     
     LoadNextFrame();
 end
+LoadNextFrame(); %Extra - hack!
 end
 end
 
@@ -485,6 +486,7 @@ t=tic;
 for i=1:n
     LoadNextFrame();
 end
+LoadNextFrame(); %Extra - hack!
 end
 
 function LoadNextFrame()
@@ -724,7 +726,7 @@ end
 
 function[]=fKbWait()
 global g;
-if ~g.sim, KbWait; end
+if ~g.respSim, KbWait; end
 end
 
 function [] = InitialiseFramework()
@@ -883,7 +885,7 @@ end
 
 function fireTextConfirm(s)
 global g;
-if ~g.sim
+if ~g.sim 
     DrawFormattedText(g.window,s,'center','center',g.textColour)
     Screen('Flip',g.window);
     fKbWait;
