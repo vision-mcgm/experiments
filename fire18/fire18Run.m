@@ -717,7 +717,7 @@ end
 
 function []=flip()
 global g;
-if ~g.sim
+if ~g.respSim
     Screen('Flip',g.window);
 end
 end
