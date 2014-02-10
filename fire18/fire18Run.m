@@ -472,7 +472,7 @@ while g.FramesInVM<g.maxFramesInVM
     
     LoadNextFrame();
 end
-%LoadNextFrame(); %Extra - hack!
+LoadNextFrame(); %Extra - hack!
 end
 end
 
@@ -488,7 +488,7 @@ t=tic;
 for i=1:n
     LoadNextFrame();
 end
-%LoadNextFrame(); %Extra - hack!
+LoadNextFrame(); %Extra - hack!
 end
 
 function LoadNextFrame()
