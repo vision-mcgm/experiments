@@ -66,7 +66,7 @@ trainingParamsCell{2}=0;
 trainingParamsCell{3}=0;
 for i=1:nTraining
     trainingParamsArray=fireScheduleTrial(trainingParamsCell);
-    CacheN(200);
+    CacheN(500);
     tps=fireTrial(trainingParamsArray);
     resps(i)=tps.correct;
     fireTextWait(['Accuracy: ' num2str(mean(resps(max(1,end-nWindow):end)))]);
@@ -102,7 +102,7 @@ end
 
 function RunExperiment
 global g;
-makeSureAtLeastN(200);
+makeSureAtLeastN(500);
 trial=1;
 g.feedback=0;
 g.training=0;
@@ -730,6 +730,8 @@ end
 function [] = InitialiseFramework()
 %Sets up PsychToolbox and other parts of the experimental framework
 global g;
+
+dbstop if error
 
 g.training=1;
 if g.sim, g.pause=0; g.smallPause=0; end
