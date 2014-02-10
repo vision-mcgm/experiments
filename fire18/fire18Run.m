@@ -842,7 +842,7 @@ end
 function firePause(s)
 %Log a string to the logfile for this experiment
 global g;
-if ~g.sim
+if ~g.sim 
     pause(s);
 end
 
