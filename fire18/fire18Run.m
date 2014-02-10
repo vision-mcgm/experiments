@@ -86,7 +86,7 @@ global g;
 g.nextFrI=1;
 g.FramesInVM=0;
 
-g.nQ=1;
+g.nQ=0;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
 g.allTrialParamsArray(1400)=fireScheduleTrial(allTrialParams(1,:));
@@ -418,10 +418,12 @@ end
 function nQ=EnqueueFrame(n)
 global g;
 g.nQ=g.nQ+1;
+%G.nQ is the number in the queue at the moment. It starts at 0
 %g.FrameNumsQ=[g.FrameNumsQ n];
-g.FrameNumsQ(g.nQ+1)=n;
+g.FrameNumsQ(g.nQ)=n;
  %Append produces a row vec
 nQ=g.nQ;
+
 end
 
 
@@ -470,7 +472,7 @@ while g.FramesInVM<g.maxFramesInVM
     
     LoadNextFrame();
 end
-LoadNextFrame(); %Extra - hack!
+%LoadNextFrame(); %Extra - hack!
 end
 end
 
@@ -486,7 +488,7 @@ t=tic;
 for i=1:n
     LoadNextFrame();
 end
-LoadNextFrame(); %Extra - hack!
+%LoadNextFrame(); %Extra - hack!
 end
 
 function LoadNextFrame()
