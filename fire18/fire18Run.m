@@ -742,6 +742,7 @@ if ~g.debugMode
 else
     g.subjectName='test';
 end
+checkDir('output\');
 g.logFileName=[g.subjectName '_log.txt'];
 g.logFileID=fopen(['output\' g.logFileName],'w');
 assert(g.logFileID ~= -1); %Check file is really open
