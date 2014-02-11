@@ -90,7 +90,7 @@ g.nQ=0;
 g.trial=1;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
-g.allTrialParamsArray(1400)=fireScheduleTrial(allTrialParams(1,:));
+g.allTrialParamsArray(1400)=fireFakeScheduleTrial();
 
 for i=1:g.info.nTrials
     i
@@ -112,6 +112,7 @@ g.training=0;
 for b=1:g.info.nBlocks
     fireTextConfirm(['Block ' num2str(b) ' of ' num2str(g.info.nBlocks) ' is about to start.\nHit any key to begin.']);
     for tInBlock=1:g.info.nTrialsPerBlock
+        prevFinVM=g.FramesInVM;
         fprintf('%d %d %d\n');
         tstart=now;
         thisTrialParams=fireTrial(g.allTrialParamsArray(trial));
@@ -119,10 +120,12 @@ for b=1:g.info.nBlocks
         thisTrialParams.tend=now;
         thisTrialParams.tstart=tstart;
         tps(trial)=thisTrialParams;
+        assert(g.FramesInVM==prevFinVM-(thisTrialParams.Lsample+thisTrialParams.Ltest));
         respSave(tps);
-        trial=trial+1
+        trial=trial+1;
         makeSureAtLeastN(500);
     end
+    
     fireTextConfirm(['You have finished block ' num2str(b) ' of ' num2str(g.info.nBlocks) '.\nPlease have a short break, then hit any key to continue.']);
 end
 
@@ -183,6 +186,29 @@ trialParams.Ssample=Ssample;
 trialParams.source=source;
 trialParams.Lsample=Lsample;
 trialParams.Ltest=Ltest;
+%Common
+trialParams;
+end
+
+function trialParams=fireFakeScheduleTrial() 
+%Matlab treats a passed cell array as multiple functions
+%Loads frames into the video queue for a particular trial
+%Remember we assume each frame will only be used once
+global g;
+
+
+%Copy params to tp
+
+%xpt-specific
+trialParams.Lpre=0;
+trialParams.Lpost=0;
+trialParams.YN=0;
+trialParams.Stest=0;
+trialParams.Sfalse=0;
+trialParams.Ssample=0;
+trialParams.source=0;
+trialParams.Lsample=0;
+trialParams.Ltest=0;
 %Common
 trialParams;
 end
