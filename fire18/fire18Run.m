@@ -87,6 +87,7 @@ g.nextFrI=1;
 g.FramesInVM=0;
 
 g.nQ=0;
+g.trial=1;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
 g.allTrialParamsArray(1400)=fireScheduleTrial(allTrialParams(1,:));
@@ -97,6 +98,7 @@ for i=1:g.info.nTrials
     if i==1
          g.allTrialParamsArray(g.info.nTrials)= g.allTrialParamsArray(1);
     end
+    g.trial=g.trial+1;
 end
 end
 
@@ -151,6 +153,7 @@ Ltest=Lsample+Lpre+Lpost;
 
 %Pick target area
 [Stest Sfalse]=pickSeparateSamples(g.frames, Ltest);
+
 source=randi(2);
 %Pick start point within sample
 sampleOffset=Lpre;
@@ -162,6 +165,8 @@ switch YN
     case 2 %No
         Ssample=sampleOffset+Sfalse;
 end
+
+fireLog([num2str(g.trial) ': Sched ' num2str(Ssample) ' ' num2str(Ssample+Lsample) ' and ' num2str(Stest) ' ' num2str(Stest+Ltest)]);
 
 %Copy params to tp
 if ~g.sim
@@ -381,6 +386,8 @@ if ~g.sim
     
     nTexes=size(fList,2);
     
+    
+    
     if ~g.sim
         for k=1:nTexes
             if k==1
@@ -409,6 +416,7 @@ if ~g.sim
             %         g.prevTextures=[g.prevTextures tex];
         end
     end
+    fireLog([num2str(g.trial) ': enqueue ' num2str(fList(1)) ' at ' num2str(startQ) ' l ' num2str(nTexes)])
     time=GetSecs-Tstart;
     period=time/length;
     %fprintf('%d textures loaded in %d, %d per tex\n',length,time,period);
@@ -558,6 +566,8 @@ fList;
 %Now we have the final frame list, so can cache.
 
 nTexes=size(fList,2);
+
+fireLog(['caching ' num2str(fList(1)) ' ' num2str(fList(end))]);
 
 if ~g.sim
     for k=1:nTexes
