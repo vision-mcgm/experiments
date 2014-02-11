@@ -1094,7 +1094,7 @@ params(3).type='enum';
 params(3).list=[0 25 50 100];
 params(3).scheme='inblock';
 
-blockReps=1; %Number of repetitions of each style of block
+blockReps=10; %Number of repetitions of each style of block
 conditionReps=40; %Number of repetitions of each condition. Must be divisible by blockReps
 conditionRepsPerBlock=conditionReps/blockReps;
 
