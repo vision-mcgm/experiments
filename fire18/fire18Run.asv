@@ -87,7 +87,6 @@ g.nextFrI=1;
 g.FramesInVM=0;
 
 g.nQ=0;
-g.trial=1;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
 g.allTrialParamsArray(1400)=fireScheduleTrial(allTrialParams(1,:));
@@ -98,7 +97,6 @@ for i=1:g.info.nTrials
     if i==1
          g.allTrialParamsArray(g.info.nTrials)= g.allTrialParamsArray(1);
     end
-    g.trial=g.trial+1;
 end
 end
 
@@ -165,8 +163,6 @@ switch YN
     case 2 %No
         Ssample=sampleOffset+Sfalse;
 end
-
-fireLog([num2str(g.trial) ': Sched ' num2str(Ssample) ' ' num2str(Ssample+Lsample) ' and ' num2str(Stest) ' ' num2str(Stest+Ltest)]);
 
 %Copy params to tp
 if ~g.sim
