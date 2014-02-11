@@ -191,15 +191,15 @@ trialParams;
 end
 
 function trialParams=fireFakeScheduleTrial() 
-%Matlab treats a passed cell array as multiple functions
-%Loads frames into the video queue for a particular trial
-%Remember we assume each frame will only be used once
+%Makes a fake trial params structure so that we can preallocate the array
 global g;
 
 
 %Copy params to tp
 
 %xpt-specific
+trialParams.startAQ=0;
+    trialParams.startBQ=0'
 trialParams.Lpre=0;
 trialParams.Lpost=0;
 trialParams.YN=0;
