@@ -104,6 +104,11 @@ end
 
 function RunExperiment
 global g;
+%VITAL: finish training
+g.feedback=0;
+g.training=0;
+
+
 makeSureAtLeastN(500);
 trial=1;
 g.feedback=0;
@@ -223,6 +228,7 @@ direction=0;
 sampleRate=1;
 angle=1;
 %Play sample
+tp.time=now;
 firePause(1);
 fixationSpot([0 255 0]);
 
