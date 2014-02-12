@@ -47,7 +47,7 @@ ShowCursor;
 
 ScheduleExperiment(); %Get the trial scheduling
 RunExperiment();
-
+sca
 keyboard
 exitExperiment();
 end
