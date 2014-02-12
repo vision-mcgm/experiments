@@ -792,7 +792,7 @@ g.logFileID=fopen(['output\' g.logFileName],'w');
 assert(g.logFileID ~= -1); %Check file is really open
 fireLog(['Starting experiment on subject ' g.subjectName]);
 g.responseFileName=[g.subjectName '_results.txt'];
-g.responseMatFileName=[ g.subjectName '_results.mat'];
+g.responseMatFileName=['output\' g.subjectName '_results.mat'];
 g.responseFileID=fopen([ 'output\' g.responseFileName],'w');
 g.FrameNumsQ=zeros(1,1400);
 g.nextFrI=1;
