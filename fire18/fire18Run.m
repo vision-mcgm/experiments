@@ -5,7 +5,7 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=1;
+g.respSim=0;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -37,13 +37,14 @@ g.exName='fire17';
 m=machineParams;
 g.maxFramesInVM=500;
 g.intercache=0;
+g.trial=0;
 
 
 InitialiseFramework();
 InitialiseExperiment();
 ShowCursor;
 
-%RunTraining();
+RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
 RunExperiment();
@@ -64,10 +65,16 @@ nWindow=10;
 trainingParamsCell{1}=1;
 trainingParamsCell{2}=0;
 trainingParamsCell{3}=0;
+
 for i=1:nTraining
-    trainingParamsArray=fireScheduleTrial(trainingParamsCell);
+    trainingParamsArray(i)=fireScheduleTrial(trainingParamsCell);
+end
+
+
+for i=1:nTraining
+  
     CacheN(500);
-    tps=fireTrial(trainingParamsArray);
+    tps=fireTrial(trainingParamsArray(i));
     resps(i)=tps.correct;
     fireTextWait(['Accuracy: ' num2str(mean(resps(max(1,end-nWindow):end)))]);
 end
@@ -83,10 +90,8 @@ end
 function ScheduleExperiment
 global g;
 %Init
-g.nextFrI=1;
-g.FramesInVM=0;
 
-g.nQ=0;
+
 g.trial=1;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
@@ -125,7 +130,9 @@ for b=1:g.info.nBlocks
         thisTrialParams.tend=now;
         thisTrialParams.tstart=tstart;
         tps(trial)=thisTrialParams;
+        if ~g.sim
         assert(g.FramesInVM==prevFinVM-(thisTrialParams.Lsample+thisTrialParams.Ltest));
+        end
         respSave(tps);
         trial=trial+1;
         makeSureAtLeastN(500);
@@ -153,9 +160,9 @@ angle=1;
 Lsample=50;
 %Extract params
 %CAREFUL WIRING THIS UP
-inv=paramCell{1};
-Lpre=paramCell{2};
-Lpost=paramCell{3};
+%inv=paramCell{1};
+Lpre=paramCell{1};
+Lpost=paramCell{2};
 
 Ltest=Lsample+Lpre+Lpost;
 
@@ -176,6 +183,9 @@ end
 
 fireLog([num2str(g.trial) ': Sched ' num2str(Ssample) ' ' num2str(Ssample+Lsample) ' and ' num2str(Stest) ' ' num2str(Stest+Ltest)]);
 
+%For struct compatibility
+trialParams.startAQ=0;
+    trialParams.startBQ=0;
 %Copy params to tp
 if ~g.sim
     trialParams.startAQ=EnqueueFrames(Ssample,Lsample,neg,direction,sampleRate,angle,location,chrom);
@@ -779,6 +789,11 @@ global g;
 
 dbstop if error
 
+%Caching
+g.nextFrI=1;
+g.FramesInVM=0;
+g.nQ=0;
+
 g.training=1;
 if g.sim, g.pause=0; g.smallPause=0; end
 if ~g.debugMode
@@ -906,7 +921,9 @@ function respSave(trialParams)
 %Log a string to the logfile for this experiment
 global g;
 design=g.design;
+
 save([g.responseMatFileName],'trialParams','design');
+
 end
 
 function fireText(s)
@@ -1110,24 +1127,24 @@ function [ allTrialParams blockParamCells info params ] = fireReadParams(  )
 %Here we vary target length across blocks, sample length within.
 %INBLOCK or ACROSSBLOCK
 
-params(1).name='inv';
+%params(1).name='inv';
+%params(1).type='enum';
+%params(1).list=[1 2];
+%params(1).scheme='inblock';
+
+
+params(1).name='Lpre';
 params(1).type='enum';
-params(1).list=[1 2];
+params(1).list=[0 25 50 100];
 params(1).scheme='inblock';
 
-
-params(2).name='Lpre';
+params(2).name='Lpost';
 params(2).type='enum';
 params(2).list=[0 25 50 100];
 params(2).scheme='inblock';
 
-params(3).name='Lpost';
-params(3).type='enum';
-params(3).list=[0 25 50 100];
-params(3).scheme='inblock';
-
-blockReps=10; %Number of repetitions of each style of block
-conditionReps=40; %Number of repetitions of each condition. Must be divisible by blockReps
+blockReps=12; %Number of repetitions of each style of block
+conditionReps=36; %Number of repetitions of each condition. Must be divisible by blockReps
 conditionRepsPerBlock=conditionReps/blockReps;
 
 if mod(conditionReps,blockReps)
