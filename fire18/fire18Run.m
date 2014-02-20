@@ -44,7 +44,7 @@ InitialiseFramework();
 InitialiseExperiment();
 ShowCursor;
 
-RunTraining();
+%RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
 RunExperiment();
