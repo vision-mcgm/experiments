@@ -5,21 +5,21 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
 g.pause=1;
 g.smallPause=0.5;
-g.videoFolder='../../cropped_20-24mins/'
+g.videoFolder='../../dump1/'
 g.monitor=1; %1 for monitor with start bar
 g.offset=200;
-g.frames=10000; %Number of frames to load in total
+g.frames=400; %Number of frames to load in total
 g.cropRect=[291   38  640  563]; %The rectangle of interest loaded from the images - x y length height
 g.textColour=[0 0 0];
 g.clusterOutputFolder='W:\Fintan\Experiments\autoOutput\';
 g.sampleAreaPause=1;
-g.decSpec='%05d';
+g.decSpec='%03d';
 g.komodo=0;
 %Factor setup
 g.inversion=1:2;
@@ -34,21 +34,20 @@ g.missed=0;
 g.areaLength=0.5*50; %secs: areas we take both samples from
 g.sampleLength=0.4*50;
 g.exName='fire17';
-m=machineParams;
+%m=machineParams;
 g.maxFramesInVM=500;
 g.intercache=0;
-g.trial=0;
 
 
 InitialiseFramework();
 InitialiseExperiment();
 ShowCursor;
-
-%RunTraining();
+fireTextWait('Accuracy: ');
+RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
 RunExperiment();
-sca
+
 keyboard
 exitExperiment();
 end
@@ -65,16 +64,10 @@ nWindow=10;
 trainingParamsCell{1}=1;
 trainingParamsCell{2}=0;
 trainingParamsCell{3}=0;
-
 for i=1:nTraining
-    trainingParamsArray(i)=fireScheduleTrial(trainingParamsCell);
-end
-
-
-for i=1:nTraining
-  
-    CacheN(500);
-    tps=fireTrial(trainingParamsArray(i));
+    trainingParamsArray=fireScheduleTrial(trainingParamsCell);
+    CacheN(99);
+    tps=fireTrial(trainingParamsArray);
     resps(i)=tps.correct;
     fireTextWait(['Accuracy: ' num2str(mean(resps(max(1,end-nWindow):end)))]);
 end
@@ -89,10 +82,7 @@ end
 
 function ScheduleExperiment
 global g;
-%Init
 
-
-g.trial=1;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
 g.allTrialParamsArray(1400)=fireFakeScheduleTrial();
@@ -130,9 +120,7 @@ for b=1:g.info.nBlocks
         thisTrialParams.tend=now;
         thisTrialParams.tstart=tstart;
         tps(trial)=thisTrialParams;
-        if ~g.sim
         assert(g.FramesInVM==prevFinVM-(thisTrialParams.Lsample+thisTrialParams.Ltest));
-        end
         respSave(tps);
         trial=trial+1;
         makeSureAtLeastN(500);
@@ -160,9 +148,9 @@ angle=1;
 Lsample=50;
 %Extract params
 %CAREFUL WIRING THIS UP
-%inv=paramCell{1};
-Lpre=paramCell{1};
-Lpost=paramCell{2};
+inv=paramCell{1};
+Lpre=paramCell{2};
+Lpost=paramCell{3};
 
 Ltest=Lsample+Lpre+Lpost;
 
@@ -181,11 +169,8 @@ switch YN
         Ssample=sampleOffset+Sfalse;
 end
 
-fireLog([num2str(g.trial) ': Sched ' num2str(Ssample) ' ' num2str(Ssample+Lsample) ' and ' num2str(Stest) ' ' num2str(Stest+Ltest)]);
+%fireLog([num2str(g.trial) ': Sched ' num2str(Ssample) ' ' num2str(Ssample+Lsample) ' and ' num2str(Stest) ' ' num2str(Stest+Ltest)]);
 
-%For struct compatibility
-trialParams.startAQ=0;
-    trialParams.startBQ=0;
 %Copy params to tp
 if ~g.sim
     trialParams.startAQ=EnqueueFrames(Ssample,Lsample,neg,direction,sampleRate,angle,location,chrom);
@@ -309,10 +294,10 @@ if ~g.sim
 end
 %We need to know the video dimensions
 
-list=dir([g.videoFolder 'normal/*.bmp']);
+list=dir([g.videoFolder '*.bmp']);
 %alteredFolder=[g.videoFolder '\altered\'];
 %alteredList=dir([alteredFolder '*.bmp']);
-img=imread([g.videoFolder 'normal/' list(1).name]);
+img=imread([g.videoFolder  list(1).name]);
 img=imresize(img,g.scaling);
 vidHeight = size(img,1);
 vidWidth = size(img,2);
@@ -566,7 +551,7 @@ if chromatic
     im=uint8(im);
     im=im*255;
 else
-    imPath=[g.videoFolder 'normal/frame' num2str(n,g.decSpec) '.bmp'];
+    imPath=[g.videoFolder 'X10_IDETSYH_Ang_frame' num2str(n,g.decSpec) '.bmp'];
     im=imread(imPath);
 end
 if g.resize
@@ -789,10 +774,12 @@ global g;
 
 dbstop if error
 
-%Caching
+%Init
 g.nextFrI=1;
 g.FramesInVM=0;
+
 g.nQ=0;
+g.trial=1;
 
 g.training=1;
 if g.sim, g.pause=0; g.smallPause=0; end
@@ -921,9 +908,7 @@ function respSave(trialParams)
 %Log a string to the logfile for this experiment
 global g;
 design=g.design;
-
 save([g.responseMatFileName],'trialParams','design');
-
 end
 
 function fireText(s)
@@ -1127,24 +1112,24 @@ function [ allTrialParams blockParamCells info params ] = fireReadParams(  )
 %Here we vary target length across blocks, sample length within.
 %INBLOCK or ACROSSBLOCK
 
-%params(1).name='inv';
-%params(1).type='enum';
-%params(1).list=[1 2];
-%params(1).scheme='inblock';
-
-
-params(1).name='Lpre';
+params(1).name='inv';
 params(1).type='enum';
-params(1).list=[0 25 50 100];
+params(1).list=[1 2];
 params(1).scheme='inblock';
 
-params(2).name='Lpost';
+
+params(2).name='Lpre';
 params(2).type='enum';
 params(2).list=[0 25 50 100];
 params(2).scheme='inblock';
 
-blockReps=12; %Number of repetitions of each style of block
-conditionReps=36; %Number of repetitions of each condition. Must be divisible by blockReps
+params(3).name='Lpost';
+params(3).type='enum';
+params(3).list=[0 25 50 100];
+params(3).scheme='inblock';
+
+blockReps=10; %Number of repetitions of each style of block
+conditionReps=40; %Number of repetitions of each condition. Must be divisible by blockReps
 conditionRepsPerBlock=conditionReps/blockReps;
 
 if mod(conditionReps,blockReps)
