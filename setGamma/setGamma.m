@@ -315,9 +315,10 @@ if ~g.sim
     for i=1:size(timestamps,2)-1
         diffs(i)=timestamps(i+1)-timestamps(i);
     end
-    'Framerate'
-    1/mean(diffs)
-    std(diffs)
+   % 'Framerate'
+   % 1/mean(diffs)
+   % std(diffs)
+   fprintf('Played %d %d\n',length,it-1);
 end
 end
 
