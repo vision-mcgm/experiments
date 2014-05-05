@@ -11,10 +11,10 @@ g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
 g.pause=1;
 g.smallPause=0.5;
-g.videoFolder='../../faceframes/'
+g.videoFolder='../../cropped_20-24mins/'
 g.monitor=1; %1 for monitor with start bar
 g.offset=200;
-g.frames=400; %Number of frames to load in total
+g.frames=10000; %Number of frames to load in total
 g.cropRect=[291   38  640  563]; %The rectangle of interest loaded from the images - x y length height
 g.textColour=[0 0 0];
 g.clusterOutputFolder='W:\Fintan\Experiments\autoOutput\';
@@ -34,7 +34,7 @@ g.missed=0;
 g.areaLength=0.5*50; %secs: areas we take both samples from
 g.sampleLength=0.4*50;
 g.exName='fire17';
-%m=machineParams;
+m=machineParams;
 g.maxFramesInVM=500;
 g.intercache=0;
 
@@ -42,14 +42,12 @@ g.intercache=0;
 InitialiseFramework();
 InitialiseExperiment();
 ShowCursor;
-fireTextWait('Accuracy: ');
+
 %RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
-
-
 RunExperiment();
-
+sca
 keyboard
 exitExperiment();
 end
@@ -68,7 +66,7 @@ trainingParamsCell{2}=0;
 trainingParamsCell{3}=0;
 for i=1:nTraining
     trainingParamsArray=fireScheduleTrial(trainingParamsCell);
-    CacheN(149);
+    CacheN(500);
     tps=fireTrial(trainingParamsArray);
     resps(i)=tps.correct;
     fireTextWait(['Accuracy: ' num2str(mean(resps(max(1,end-nWindow):end)))]);
@@ -84,7 +82,12 @@ end
 
 function ScheduleExperiment
 global g;
+%Init
+g.nextFrI=1;
+g.FramesInVM=0;
 
+g.nQ=0;
+g.trial=1;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
 g.allTrialParamsArray(1400)=fireFakeScheduleTrial();
@@ -111,8 +114,6 @@ trial=1;
 g.feedback=0;
 g.training=0;
 
-g.trial=1;
-
 for b=1:g.info.nBlocks
     fireTextConfirm(['Block ' num2str(b) ' of ' num2str(g.info.nBlocks) ' is about to start.\nHit any key to begin.']);
     for tInBlock=1:g.info.nTrialsPerBlock
@@ -124,10 +125,9 @@ for b=1:g.info.nBlocks
         thisTrialParams.tend=now;
         thisTrialParams.tstart=tstart;
         tps(trial)=thisTrialParams;
-       % assert(g.FramesInVM==prevFinVM-(thisTrialParams.Lsample+thisTrialParams.Ltest));
+        assert(g.FramesInVM==prevFinVM-(thisTrialParams.Lsample+thisTrialParams.Ltest));
         respSave(tps);
         trial=trial+1;
-        g.trial=g.trial+1;
         makeSureAtLeastN(500);
     end
     
@@ -143,91 +143,79 @@ function trialParams=fireScheduleTrial(paramCell)
 %Loads frames into the video queue for a particular trial
 %Remember we assume each frame will only be used once
 global g;
-%WIRING - careful with this
-inv=paramCell{1};
-Lsample=paramCell{2};
-ratio=paramCell{3};
-
-Ltest=Lsample*ratio;
+%Leftover vars
 neg=0;
 chrom=0;
 location=3;
 direction=0;
 sampleRate=1;
+angle=1;
+Lsample=50;
+%Extract params
+%CAREFUL WIRING THIS UP
+inv=paramCell{1};
+Lpre=paramCell{2};
+Lpost=paramCell{3};
 
-if inv==1
-    angle=0;
-elseif inv==2
-    angle=180;
+Ltest=Lsample+Lpre+Lpost;
+
+%Pick target area
+[Stest Sfalse]=pickSeparateSamples(g.frames, Ltest);
+
+source=randi(2);
+%Pick start point within sample
+sampleOffset=Lpre;
+YN=randi(2);
+
+switch YN
+    case 1 %Yes
+        Ssample=sampleOffset+Stest;
+    case 2 %No
+        Ssample=sampleOffset+Sfalse;
 end
 
+fireLog([num2str(g.trial) ': Sched ' num2str(Ssample) ' ' num2str(Ssample+Lsample) ' and ' num2str(Stest) ' ' num2str(Stest+Ltest)]);
 
-%Pick folder
-f=randi(size(g.folderList,2));
-    nf=g.folderNumFrames(f);
-
-%Pick separate samples
-[StestA StestB]=pickSeparateSamples(nf, Ltest);
-
-sampleOffset=randi(Ltest-Lsample);
-trueTest=randi(2);
-switch trueTest
-    case 1 %first
-        Ssample=sampleOffset+StestA;
-        Strue=StestA;
-        Sfalse=StestB;
-    case 2 %second
-        Ssample=sampleOffset+StestB;
-        Strue=StestB;
-        Sfalse=StestA;
-
-end
-
+%Copy params to tp
 if ~g.sim
-    trialParams.startSampleQ=EnqueueFrames(f,Ssample,Lsample,neg,direction,sampleRate,angle,location,chrom);
-    trialParams.startTestAQ=EnqueueFrames(f,StestA,Ltest,neg,direction,sampleRate,angle,location,chrom);
-    [trialParams.startTestBQ lastQ]=EnqueueFrames(f,StestB,Ltest,neg,direction,sampleRate,angle,location,chrom);
+    trialParams.startAQ=EnqueueFrames(Ssample,Lsample,neg,direction,sampleRate,angle,location,chrom);
+    trialParams.startBQ=EnqueueFrames(Stest,Ltest,neg,direction,sampleRate,angle,location,chrom);
 end
-
-fprintf('%d:%d, %d:%d, %d:%d %d\n',Ssample,Ssample+Lsample,StestA,StestA+Ltest,StestB,StestB+Ltest,trueTest);
-
-trialParams.trueTest=trueTest;
-trialParams.Strue=Strue;
+%xpt-specific
+trialParams.Lpre=Lpre;
+trialParams.Lpost=Lpost;
+trialParams.YN=YN;
+trialParams.Stest=Stest;
 trialParams.Sfalse=Sfalse;
 trialParams.Ssample=Ssample;
-trialParams.StestA=StestA;
-trialParams.StestB=StestB;
+trialParams.source=source;
 trialParams.Lsample=Lsample;
 trialParams.Ltest=Ltest;
-trialParams.folder=f;
-trialParams.inv=inv;
-
-g.lastFrameByTrial(g.trial)=lastQ;
-vLog(sprintf('trial %d lastframe %d\n',g.trial,lastQ));
-
-return
-
-
+%Common
+trialParams;
 end
 
 function trialParams=fireFakeScheduleTrial() 
 %Makes a fake trial params structure so that we can preallocate the array
 global g;
-trialParams.startSampleQ=0;
-trialParams.startTestAQ=0;
-trialParams.startTestBQ=0;
-trialParams.trueTest=0;
-trialParams.Strue=0;
-trialParams.Sfalse=0;
 
+
+%Copy params to tp
+
+%xpt-specific
+trialParams.startAQ=0;
+    trialParams.startBQ=0'
+trialParams.Lpre=0;
+trialParams.Lpost=0;
+trialParams.YN=0;
+trialParams.Stest=0;
+trialParams.Sfalse=0;
 trialParams.Ssample=0;
-trialParams.StestA=0;
-trialParams.StestB=0;
+trialParams.source=0;
 trialParams.Lsample=0;
 trialParams.Ltest=0;
-trialParams.folder=0;
-trialParams.inv=0;
-
+%Common
+trialParams;
 end
 
 function [tp]=fireTrial(tp)
@@ -238,11 +226,7 @@ location=3;
 length=100;
 direction=0;
 sampleRate=1;
-if tp.inv==1
-    angle=1;
-elseif tp.inv==2
-    angle=4;
-end
+angle=1;
 %Play sample
 tp.time=now;
 firePause(1);
@@ -250,17 +234,13 @@ fixationSpot([0 255 0]);
 
 if ~g.sim
     pause(1);
-    playClip(tp.startSampleQ,tp.Lsample,neg,direction,sampleRate,angle,location,chrom);
+    playClip(tp.startAQ,tp.Lsample,neg,direction,sampleRate,angle,location,chrom);
     fireClear;
     firePause(1);
-    fixationSpot([0 255 0]);
-    firePause(1);
-    playClip(tp.startTestAQ,tp.Ltest,neg,direction,sampleRate,angle,location,chrom);
-    fireClear;
     fixationSpot([0 255 0]);
     firePause(1);
     
-    playClip(tp.startTestBQ,tp.Ltest,neg,direction,sampleRate,angle,location,chrom);
+    playClip(tp.startBQ,tp.Ltest,neg,direction,sampleRate,angle,location,chrom);
         fixationSpot([0 0 255]);
 end
 
@@ -270,15 +250,15 @@ if g.sim
 elseif g.respSim
     response=randi(2)-1;
 else
-    response=getLR(); %0 for left, 1 for right
+    response=getYN();
 end
 flip;
 %Work out answer
 tp.correct=0;
-if tp.trueTest==1 %first
-    if response==0 tp.correct=1; else tp.correct=0;end
-elseif tp.trueTest==2 %second
-    if response==1,tp.correct=1;else tp.correct=0;end
+if tp.YN==1 %yes
+    if response==0 tp.correct=0; else tp.correct=1;end
+elseif tp.YN==2 %no
+    if response==0,tp.correct=1;else tp.correct=0;end
 end
 
 if g.sim
@@ -288,11 +268,9 @@ if g.sim
    
 end
 
-tp.LR=response;
-
 %Remember to use tp.correct not correct
 
-if 1% g.feedback
+if g.feedback
     if tp.correct, answer='Correct';, else answer='Incorrect';,end
     fireTextWait(answer);
 end
@@ -321,35 +299,39 @@ if ~g.sim
 end
 %We need to know the video dimensions
 
-list=dir([g.videoFolder ]);
-g.dirList=list;
-nDirs=size(list,1);
-
-for i=1:nDirs
-    l=dir([g.videoFolder list(i).name '*.bmp']);
-    g.nByFolder(i)=size(l,1);
-end
-
-it=1;
-for i=1:size(list,1)
-    if isdir([g.videoFolder list(i).name]) && ~strcmp(list(i).name,'.') && ~strcmp(list(i).name,'..')
-        g.folderList{it}=[g.videoFolder list(i).name '/'];
-        
-        framesList=dir([g.folderList{it} '*.bmp']);
-        g.folderNumFrames(it)=size(framesList,1);
-        it=it+1;
-    end
-end
+list=dir([g.videoFolder 'normal/*.bmp']);
 %alteredFolder=[g.videoFolder '\altered\'];
 %alteredList=dir([alteredFolder '*.bmp']);
-tempList=dir([g.folderList{1} '*.bmp']);
-img=imread([g.folderList{1}  tempList(1).name]);
+img=imread([g.videoFolder 'normal/' list(1).name]);
 img=imresize(img,g.scaling);
 vidHeight = size(img,1);
 vidWidth = size(img,2);
 g.h=vidHeight;
 g.w=vidWidth;
 g.prevTextures=[];
+
+if 0
+    for k = 1 :g.frames
+        k;
+        fireTextNoWait(num2str(k));
+        img=imread([g.videoFolder list(k).name]);
+        img=img(g.cropRect(2):g.cropRect(2)+g.cropRect(4),...
+            g.cropRect(1):g.cropRect(1)+g.cropRect(3),:);
+        %  altImg=imread([alteredFolder list(k).name]);
+        %  altImg=altImg(g.cropRect(2):g.cropRect(2)+g.cropRect(4),...
+        % g.cropRect(1):g.cropRect(1)+g.cropRect(3),:);
+        
+        % mov(k).cdata = read(xyloObj ,mod(k,nFrames)+1);
+        
+        g.texes(k)=Screen('MakeTexture',g.window,img);
+        % g.texes(g.frames+k)=Screen('MakeTexture',g.window,altImg);
+        
+        % tex=g.texes(k);
+        
+    end
+end
+%This assumes that frames are numbered strictly alphabetically (leading
+%zeros)
 end
 
 function []=firePractice(n)
@@ -406,7 +388,7 @@ end
 
 
 
-function [startQ,endQ]=EnqueueFrames(f,start,length,negative,backwards,interval,angle,location,chromatic)
+function startQ=EnqueueFrames(start,length,negative,backwards,interval,angle,location,chromatic)
 global g;
 if ~g.sim
     %Plays a constant clip starting at start with a certain length
@@ -441,11 +423,29 @@ if ~g.sim
     if ~g.sim
         for k=1:nTexes
             if k==1
-                 startQ=EnqueueFrame(f,fList(k));
+                 startQ=EnqueueFrame(fList(k));
             else
-                endQ=EnqueueFrame(f,fList(k));
+                EnqueueFrame(fList(k));
             end
-          
+            %         k;
+            %         if negative
+            %             imPath=[g.videoFolder 'negative\frame' num2str(fList(k),g.decSpec) '.bmp'];
+            %         end
+            %         if chromatic
+            %             imPath=[g.videoFolder 'hue\frame' num2str(fList(k),g.decSpec) '.bmp'];
+            %             im=imread(imPath);
+            %             im=uint8(im);
+            %             im=im*255;
+            %         else
+            %             imPath=[g.videoFolder 'normal/frame' num2str(fList(k),g.decSpec) '.bmp'];
+            %             im=imread(imPath);
+            %         end
+            %         if g.resize
+            %             im=imresize(im,g.scaling);
+            %         end
+            %         tex=Screen('MakeTexture',g.window,im);
+            %         g.texes(fList_handles(k))=tex;
+            %         g.prevTextures=[g.prevTextures tex];
         end
     end
     fireLog([num2str(g.trial) ': enqueue ' num2str(fList(1)) ' at ' num2str(startQ) ' l ' num2str(nTexes)])
@@ -455,13 +455,12 @@ if ~g.sim
 end
 end
 
-function nQ=EnqueueFrame(f,n)
+function nQ=EnqueueFrame(n)
 global g;
 g.nQ=g.nQ+1;
 %G.nQ is the number in the queue at the moment. It starts at 0
 %g.FrameNumsQ=[g.FrameNumsQ n];
 g.FrameNumsQ(g.nQ)=n;
-g.fQ(g.nQ)=f;
  %Append produces a row vec
 nQ=g.nQ;
 
@@ -538,16 +537,15 @@ global g;
 %Check whether video memory is full or not before here!
 if ~g.sim
 if g.nextFrI <= size(g.FrameNumsQ,2) &&  g.FramesInVM < g.maxFramesInVM%It's a vector, so must reduce to one first!
-    LoadFrame(g.fQ(g.nextFrI),g.FrameNumsQ(g.nextFrI),0,0);
+    LoadFrame(g.FrameNumsQ(g.nextFrI),0,0);
     g.FramesInVM=g.FramesInVM+1;
     g.nextFrI=g.nextFrI+1;
 end
 end
 end
 
-function LoadFrame(f,n,negative,chromatic)
+function LoadFrame(n,negative,chromatic)
 global g;
-%Frame number, 
 t=GetSecs();
 if negative
     imPath=[g.videoFolder 'negative\frame' num2str(n,g.decSpec) '.bmp'];
@@ -558,7 +556,7 @@ if chromatic
     im=uint8(im);
     im=im*255;
 else
-    imPath=[g.folderList{f} 'frame' num2str(n,g.decSpec) '.bmp'];
+    imPath=[g.videoFolder 'normal/frame' num2str(n,g.decSpec) '.bmp'];
     im=imread(imPath);
 end
 if g.resize
@@ -569,7 +567,7 @@ g.texes(g.nextFrI)=tex;
 g.numsByTex(g.nextFrI)=n;
 % g.testTex=tex;
 t=GetSecs()-t;
-fprintf('Frame %d loaded in %d to tex %d, %d in VM\n',n,t,tex,g.FramesInVM);
+fprintf('Frame q %d loaded in %d to tex %d, %d in VM\n',n,t,tex,g.FramesInVM);
 end
 
 function [  ] = cacheClip( start,length,negative,backwards,interval,regime,location,chromatic )
@@ -755,8 +753,6 @@ if ~g.sim
     Priority(0);
 end
 
-fprintf('Played %d %d\n',length,it-1);
-
 end
 
 
@@ -783,13 +779,6 @@ global g;
 
 dbstop if error
 
-%Init
-g.nextFrI=1;
-g.FramesInVM=0;
-
-g.nQ=0;
-g.trial=1;
-
 g.training=1;
 if g.sim, g.pause=0; g.smallPause=0; end
 if ~g.debugMode
@@ -801,14 +790,11 @@ checkDir('output\');
 g.logFileName=[g.subjectName '_log.txt'];
 g.logFileID=fopen(['output\' g.logFileName],'w');
 assert(g.logFileID ~= -1); %Check file is really open
-g.vlogFileName=[ 'vlog.txt'];
-g.vlogFileID=fopen(['output\' g.vlogFileName],'w');
 fireLog(['Starting experiment on subject ' g.subjectName]);
 g.responseFileName=[g.subjectName '_results.txt'];
-g.responseMatFileName=['output\' g.subjectName '_results.mat'];
+g.responseMatFileName=[ g.subjectName '_results.mat'];
 g.responseFileID=fopen([ 'output\' g.responseFileName],'w');
-g.FrameNumsQ=zeros(1,2000);
-g.fQ=zeros(1,2000);
+g.FrameNumsQ=zeros(1,1400);
 g.nextFrI=1;
 g.FramesInVM=0;
 
@@ -896,15 +882,6 @@ function fireLog(s)
 global g;
 logString=[datestr(now) ': ' s];
 fprintf(g.logFileID,[logString '\n']);
-fprintf([logString '\n']);
-
-end
-
-function vLog(s)
-%Log a string to the logfile for this experiment
-global g;
-logString=[datestr(now) ': ' s];
-fprintf(g.vlogFileID,[logString '\n']);
 fprintf([logString '\n']);
 
 end
@@ -1061,7 +1038,7 @@ else
 end
 end
 
-function [r]=getLR()
+function [r]=getYN()
 %Gets key response - 0 for left or 1 for right.
 global g;
 if g.sim
@@ -1093,13 +1070,13 @@ else
                 exitExperiment();
             end
         end
-        a = strcmp(response_key, 'left') | strcmp(response_key,'LeftArrow') ; %Mac
+        a = strcmp(response_key, 'up') | strcmp(response_key,'UpArrow') ; %Mac
         if a(1)==1; a=1; else a=0; end
         %Covers the case where a is a vector
         
         
         %Makes sure a is always 1 or 0 and not anything else
-        b = strcmp(response_key, 'right') | strcmp(response_key,'RightArrow');
+        b = strcmp(response_key, 'down') | strcmp(response_key,'DownArrow');
         if b(1)==1; b=1; else b=0; end
         
         %
@@ -1112,9 +1089,9 @@ else
     
     
     if b
-        r=1;
-    else
         r=0;
+    else
+        r=1;
     end
 end
 end
@@ -1136,21 +1113,21 @@ function [ allTrialParams blockParamCells info params ] = fireReadParams(  )
 params(1).name='inv';
 params(1).type='enum';
 params(1).list=[1 2];
-params(1).scheme='acrossblock';
+params(1).scheme='inblock';
 
 
-params(2).name='Lsample';
+params(2).name='Lpre';
 params(2).type='enum';
-params(2).list=[10 25 50];
+params(2).list=[0 25 50 100];
 params(2).scheme='inblock';
 
-params(3).name='ratio';
+params(3).name='Lpost';
 params(3).type='enum';
-params(3).list=[1.2 1.4 1.6 1.8 2];
+params(3).list=[0 25 50 100];
 params(3).scheme='inblock';
 
 blockReps=10; %Number of repetitions of each style of block
-conditionReps=20; %Number of repetitions of each condition. Must be divisible by blockReps
+conditionReps=40; %Number of repetitions of each condition. Must be divisible by blockReps
 conditionRepsPerBlock=conditionReps/blockReps;
 
 if mod(conditionReps,blockReps)
