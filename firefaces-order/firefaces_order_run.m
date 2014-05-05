@@ -1,20 +1,21 @@
-function [  ] = faces1Run()
+function [  ] = firefaces_order_run()
 %Backwards detection over sampling rates
 %Parameters
 clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
 g.pause=1;
 g.smallPause=0.5;
+g.fireFolder='..\..\cropped_20-24mins\normal\';
 g.videoFolder='../../faceframes/'
 g.monitor=1; %1 for monitor with start bar
 g.offset=200;
-g.frames=400; %Number of frames to load in total
+g.frames=10000; %Number of frames to load in total
 g.cropRect=[291   38  640  563]; %The rectangle of interest loaded from the images - x y length height
 g.textColour=[0 0 0];
 g.clusterOutputFolder='W:\Fintan\Experiments\autoOutput\';
@@ -87,11 +88,11 @@ global g;
 
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
-g.allTrialParamsArray(1400)=fireFakeScheduleTrial();
+g.allTrialParamsArray(1400)=fireScheduleTrial(allTrialParams(1,:),0);%Fake!
 
 for i=1:g.info.nTrials
     i
-    g.allTrialParamsArray(i)=fireScheduleTrial(allTrialParams(i,:));
+    g.allTrialParamsArray(i)=fireScheduleTrial(allTrialParams(i,:),1);
     if i==1
          g.allTrialParamsArray(g.info.nTrials)= g.allTrialParamsArray(1);
     end
@@ -134,7 +135,7 @@ end
 end
 
 
-function trialParams=fireScheduleTrial(paramCell) 
+function trialParams=fireScheduleTrial(paramCell,real) 
 %Matlab treats a passed cell array as multiple functions
 %Loads frames into the video queue for a particular trial
 %Remember we assume each frame will only be used once
@@ -142,10 +143,15 @@ global g;
 %WIRING - careful with this
 %inv=paramCell{1};
 inv=1;
-Lsample=paramCell{1};
-ratio=paramCell{2};
+order=paramCell{1};
 
-Ltest=Lsample*ratio;
+%END WIRING
+LsampleFire=50;
+LsampleFace=50;
+ratio=1.2
+
+LtestFace=LsampleFace*ratio;
+LtestFire=LsampleFire*ratio;
 neg=0;
 chrom=0;
 location=3;
@@ -164,68 +170,73 @@ f=randi(size(g.folderList,1));
     nf=g.folderNumFrames(f);
 
 %Pick separate samples
-[StestA StestB]=pickSeparateSamples(nf, Ltest);
+[StestAFace StestBFace]=pickSeparateSamples(nf, LtestFace);
+[StestAFire StestBFire]=pickSeparateSamples(g.frames, LtestFire);
 
-sampleOffset=randi(Ltest-Lsample);
-trueTest=randi(2);
-switch trueTest
+sampleOffsetFace=randi(LtestFace-LsampleFace);
+sampleOffsetFire=randi(LtestFire-LsampleFire);
+trueTestFace=randi(2);
+switch trueTestFace
     case 1 %first
-        Ssample=sampleOffset+StestA;
-        Strue=StestA;
-        Sfalse=StestB;
+        SsampleFace=sampleOffsetFace+StestAFace;
+        StrueFace=StestAFace;
+        SfalseFace=StestBFace;
     case 2 %second
-        Ssample=sampleOffset+StestB;
-        Strue=StestB;
-        Sfalse=StestA;
-
+        SsampleFace=sampleOffsetFace+StestBFace;
+        StrueFace=StestBFace;
+        SfalseFace=StestAFace;
+end
+trueTestFire=randi(2);
+switch trueTestFire
+    case 1 %first
+        SsampleFire=sampleOffsetFire+StestAFire;
+        StrueFire=StestAFire;
+        SfalseFire=StestBFire;
+    case 2 %second
+        SsampleFire=sampleOffsetFire+StestBFire;
+        StrueFire=StestBFire;
+        SfalseFire=StestAFire;
 end
 
-if ~g.sim
-    trialParams.startSampleQ=EnqueueFrames(f,Ssample,Lsample,neg,direction,sampleRate,angle,location,chrom);
-    trialParams.startTestAQ=EnqueueFrames(f,StestA,Ltest,neg,direction,sampleRate,angle,location,chrom);
-    [trialParams.startTestBQ lastQ]=EnqueueFrames(f,StestB,Ltest,neg,direction,sampleRate,angle,location,chrom);
+if ~g.sim & real
+    trialParams.startSampleQFace=EnqueueFrames(f,SsampleFace,LsampleFace,neg,direction,sampleRate,angle,location,chrom);
+    trialParams.startTestAQFace=EnqueueFrames(f,StestAFace,LtestFace,neg,direction,sampleRate,angle,location,chrom);
+    fFire=99;
+    trialParams.startSampleQFire=EnqueueFrames(fFire,SsampleFire,LsampleFire,neg,direction,sampleRate,angle,location,chrom);
+    trialParams.startTestAQFire=EnqueueFrames(fFire,StestAFire,LtestFire,neg,direction,sampleRate,angle,location,chrom);
+else
+    %Because this function makes us a fake trial too
+    trialParams.startSampleQFace=0;
+    trialParams.startTestAQFace=0;
+    trialParams.startSampleQFire=0;
+    trialParams.startTestAQFire=0;
 end
 
-fprintf('%d:%d, %d:%d, %d:%d %d\n',Ssample,Ssample+Lsample,StestA,StestA+Ltest,StestB,StestB+Ltest,trueTest);
 
-trialParams.trueTest=trueTest;
-trialParams.Strue=Strue;
-trialParams.Sfalse=Sfalse;
-trialParams.Ssample=Ssample;
-trialParams.StestA=StestA;
-trialParams.StestB=StestB;
-trialParams.Lsample=Lsample;
-trialParams.Ltest=Ltest;
-trialParams.folder=f;
+
+trialParams.trueTestFace=trueTestFace;
+trialParams.StrueFace=StrueFace;
+trialParams.SfalseFace=SfalseFace;
+trialParams.SsampleFace=SsampleFace;
+trialParams.StestAFace=StestAFace;
+trialParams.StestBFace=StestBFace;
+trialParams.LsampleFace=LsampleFace;
+trialParams.LtestFace=LtestFace;
+trialParams.folderFace=f;
 trialParams.inv=inv;
 
-g.lastFrameByTrial(g.trial)=lastQ;
-vLog(sprintf('trial %d lastframe %d\n',g.trial,lastQ));
-
-return
-
-
-end
-
-function trialParams=fireFakeScheduleTrial() 
-%Makes a fake trial params structure so that we can preallocate the array
-global g;
-trialParams.startSampleQ=0;
-trialParams.startTestAQ=0;
-trialParams.startTestBQ=0;
-trialParams.trueTest=0;
-trialParams.Strue=0;
-trialParams.Sfalse=0;
-
-trialParams.Ssample=0;
-trialParams.StestA=0;
-trialParams.StestB=0;
-trialParams.Lsample=0;
-trialParams.Ltest=0;
-trialParams.folder=0;
-trialParams.inv=0;
+trialParams.trueTestFire=trueTestFire;
+trialParams.StrueFire=StrueFire;
+trialParams.SfalseFire=SfalseFire;
+trialParams.SsampleFire=SsampleFire;
+trialParams.StestAFire=StestAFire;
+trialParams.StestBFire=StestBFire;
+trialParams.LsampleFire=LsampleFire;
+trialParams.LtestFire=LtestFire;
 
 end
+
+
 
 function [tp]=fireTrial(tp)
 global g;
@@ -247,21 +258,24 @@ fixationSpot([0 255 0]);
 
 if ~g.sim
     pause(1);
-    playClip(tp.startSampleQ,tp.Lsample,neg,direction,sampleRate,angle,location,chrom);
+    playClip(tp.startSampleQFace,tp.LsampleFace,neg,direction,sampleRate,angle,location,chrom);
     fireClear;
     firePause(1);
     fixationSpot([0 255 0]);
     firePause(1);
-    playClip(tp.startTestAQ,tp.Ltest,neg,direction,sampleRate,angle,location,chrom);
+    playClip(tp.startSampleQFire,tp.LsampleFire,neg,direction,sampleRate,angle,location,chrom);
     fireClear;
+    firePause(1);
     fixationSpot([0 255 0]);
+    firePause(1);
+    playClip(tp.startTestAQFire,tp.LsampleFire,neg,direction,sampleRate,angle,location,chrom);
+    fireClear;
+    firePause(1);
+    fixationSpot([0 0 255]);
     firePause(1);
     
-    playClip(tp.startTestBQ,tp.Ltest,neg,direction,sampleRate,angle,location,chrom);
-        fixationSpot([0 0 255]);
-end
-
-%Get response
+    
+%Get FIRST response
 if g.sim
     response=makeResponse(direction,sampleRate);
 elseif g.respSim
@@ -272,27 +286,55 @@ end
 flip;
 %Work out answer
 tp.correct=0;
-if tp.trueTest==1 %first
+if tp.trueTestFire==1 %first
     if response==0 tp.correct=1; else tp.correct=0;end
-elseif tp.trueTest==2 %second
+elseif tp.trueTestFire==2 %second
     if response==1,tp.correct=1;else tp.correct=0;end
 end
-
 if g.sim
-    
         if rand() <0.6
             tp.correct=1;else tp.correct=0;end
-   
 end
-
 tp.LR=response;
-
 %Remember to use tp.correct not correct
-
 if  g.feedback
     if tp.correct, answer='Correct';, else answer='Incorrect';,end
     fireTextWait(answer);
 end
+
+    
+    playClip(tp.startTestAQFace,tp.LtestFace,neg,direction,sampleRate,angle,location,chrom);
+        fixationSpot([0 0 255]);
+        
+        
+%Get SECOND response
+if g.sim
+    response=makeResponse(direction,sampleRate);
+elseif g.respSim
+    response=randi(2)-1;
+else
+    response=getLR(); %0 for left, 1 for right
+end
+flip;
+%Work out answer
+tp.correct=0;
+if tp.trueTestFire==1 %first
+    if response==0 tp.correct=1; else tp.correct=0;end
+elseif tp.trueTestFire==2 %second
+    if response==1,tp.correct=1;else tp.correct=0;end
+end
+if g.sim
+        if rand() <0.6
+            tp.correct=1;else tp.correct=0;end
+end
+tp.LR=response;
+%Remember to use tp.correct not correct
+if  g.feedback
+    if tp.correct, answer='Correct';, else answer='Incorrect';,end
+    fireTextWait(answer);
+end
+end
+
 end
 
 function []=CheckAssertions()
@@ -337,6 +379,7 @@ for i=1:size(list,1)
         it=it+1;
     end
 end
+g.folderList{99}=g.fireFolder;
 %alteredFolder=[g.videoFolder '\altered\'];
 %alteredList=dir([alteredFolder '*.bmp']);
 tempList=dir([g.folderList{1} '*.bmp']);
@@ -432,9 +475,6 @@ if ~g.sim
     %Now we have the final frame list, so can cache.
     
     nTexes=size(fList,2);
-    
-    
-    
     if ~g.sim
         for k=1:nTexes
             if k==1
@@ -457,11 +497,11 @@ global g;
 g.nQ=g.nQ+1;
 %G.nQ is the number in the queue at the moment. It starts at 0
 %g.FrameNumsQ=[g.FrameNumsQ n];
+
 g.FrameNumsQ(g.nQ)=n;
 g.fQ(g.nQ)=f;
  %Append produces a row vec
 nQ=g.nQ;
-
 end
 
 
@@ -555,7 +595,8 @@ if chromatic
     im=uint8(im);
     im=im*255;
 else
-    imPath=[g.folderList{f} 'frame' num2str(n,g.decSpec) '.bmp'];
+
+imPath=[g.folderList{f} 'frame' num2str(n,g.decSpec) '.bmp'];
     im=imread(imPath);
 end
 if g.resize
@@ -1146,15 +1187,12 @@ function [ allTrialParams blockParamCells info params ] = fireReadParams(  )
 % params(3).list=[1.2 1.4 1.6 1.8 2];
 % params(3).scheme='inblock';
 
-params(1).name='Lsample';
+params(1).name='sampleOrder';
 params(1).type='enum';
-params(1).list=[10 25 50];
-params(1).scheme='acrossblock';
+params(1).list=[1 2];
+params(1).scheme='inblock';
 
-params(2).name='ratio';
-params(2).type='enum';
-params(2).list=[1.2 1.6 2 2.4 2.8];
-params(2).scheme='inblock';
+
 
 blockReps=10; %Number of repetitions of each style of block
 conditionReps=30; %Number of repetitions of each condition. Must be divisible by blockReps
