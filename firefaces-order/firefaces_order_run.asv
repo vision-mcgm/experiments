@@ -5,7 +5,7 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -268,18 +268,14 @@ if ~g.sim
     firePause(1);
     fixationSpot([0 255 0]);
     firePause(1);
-    playClip(tp.startTestAQFire,tp.LsampleFire,neg,direction,sampleRate,angle,location,chrom);
+    playClip(tp.startTestAQFire,tp.LtestFire,neg,direction,sampleRate,angle,location,chrom);
     fireClear;
     firePause(1);
     fixationSpot([0 0 255]);
     firePause(1);
-
     
-    playClip(tp.startTestAQFace,tp.LtestFace,neg,direction,sampleRate,angle,location,chrom);
-        fixationSpot([0 0 255]);
-end
-
-%Get response
+    
+%Get FIRST response
 if g.sim
     response=makeResponse(direction,sampleRate);
 elseif g.respSim
@@ -289,28 +285,50 @@ else
 end
 flip;
 %Work out answer
-tp.correct=0;
+tp.correctFire=0;
 if tp.trueTestFire==1 %first
-    if response==0 tp.correct=1; else tp.correct=0;end
-elseif tp.trueTestFace==2 %second
-    if response==1,tp.correct=1;else tp.correct=0;end
-end
-
-if g.sim
-    
-        if rand() <0.6
-            tp.correct=1;else tp.correct=0;end
-   
+    if response==0 tp.correctFire=1; else tp.correctFire=0;end
+elseif tp.trueTestFire==2 %second
+    if response==1,tp.correctFire=1;else tp.correctFire=0;end
 end
 
 tp.LR=response;
-
 %Remember to use tp.correct not correct
-
 if  g.feedback
-    if tp.correct, answer='Correct';, else answer='Incorrect';,end
+    if tp.correctFire, answer='Correct';, else answer='Incorrect';,end
     fireTextWait(answer);
 end
+
+    
+    playClip(tp.startTestAQFace,tp.LtestFace,neg,direction,sampleRate,angle,location,chrom);
+        fixationSpot([0 0 255]);
+        
+        
+%Get SECOND response
+if g.sim
+    response=makeResponse(direction,sampleRate);
+elseif g.respSim
+    response=randi(2)-1;
+else
+    response=getLR(); %0 for left, 1 for right
+end
+flip;
+%Work out answer
+tp.correctFace=0;
+if tp.trueTestFace==1 %first
+    if response==0 tp.correctFace=1; else tp.correctFace=0;end
+elseif tp.trueTestFace==2 %second
+    if response==1,tp.correctFace=1;else tp.correctFace=0;end
+end
+
+tp.LR=response;
+%Remember to use tp.correct not correct
+if  g.feedback
+    if tp.correctFace, answer='Correct';, else answer='Incorrect';,end
+    fireTextWait(answer);
+end
+end
+
 end
 
 function []=CheckAssertions()
