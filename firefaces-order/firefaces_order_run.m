@@ -285,20 +285,17 @@ else
 end
 flip;
 %Work out answer
-tp.correct=0;
+tp.correctFire=0;
 if tp.trueTestFire==1 %first
-    if response==0 tp.correct=1; else tp.correct=0;end
+    if response==0 tp.correctFire=1; else tp.correctFire=0;end
 elseif tp.trueTestFire==2 %second
-    if response==1,tp.correct=1;else tp.correct=0;end
+    if response==1,tp.correctFire=1;else tp.correctFire=0;end
 end
-if g.sim
-        if rand() <0.6
-            tp.correct=1;else tp.correct=0;end
-end
+
 tp.LR=response;
 %Remember to use tp.correct not correct
 if  g.feedback
-    if tp.correct, answer='Correct';, else answer='Incorrect';,end
+    if tp.correctFire, answer='Correct';, else answer='Incorrect';,end
     fireTextWait(answer);
 end
 
@@ -317,20 +314,17 @@ else
 end
 flip;
 %Work out answer
-tp.correct=0;
-if tp.trueTestFire==1 %first
-    if response==0 tp.correct=1; else tp.correct=0;end
-elseif tp.trueTestFire==2 %second
-    if response==1,tp.correct=1;else tp.correct=0;end
+tp.correctFace=0;
+if tp.trueTestFace==1 %first
+    if response==0 tp.correctFace=1; else tp.correctFace=0;end
+elseif tp.trueTestFace==2 %second
+    if response==1,tp.correctFace=1;else tp.correctFace=0;end
 end
-if g.sim
-        if rand() <0.6
-            tp.correct=1;else tp.correct=0;end
-end
+
 tp.LR=response;
 %Remember to use tp.correct not correct
 if  g.feedback
-    if tp.correct, answer='Correct';, else answer='Incorrect';,end
+    if tp.correctFace, answer='Correct';, else answer='Incorrect';,end
     fireTextWait(answer);
 end
 end
