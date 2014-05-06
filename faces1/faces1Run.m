@@ -5,7 +5,7 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -162,7 +162,7 @@ end
 
 
 %Pick folder
-f=randi(size(g.folderList,1));
+f=randi(size(g.folderList,2));
     nf=g.folderNumFrames(f);
 
 %Pick separate samples
@@ -186,10 +186,16 @@ if ~g.sim
     trialParams.startSampleQ=EnqueueFrames(f,Ssample,Lsample,neg,direction,sampleRate,angle,location,chrom);
     trialParams.startTestAQ=EnqueueFrames(f,StestA,Ltest,neg,direction,sampleRate,angle,location,chrom);
     [trialParams.startTestBQ lastQ]=EnqueueFrames(f,StestB,Ltest,neg,direction,sampleRate,angle,location,chrom);
+else
+    trialParams.startSampleQ=0;
+    trialParams.startTestAQ=0;
+    trialParams.startTestBQ=0;
+        lastQ=0;;
 end
 
 fprintf('%d:%d, %d:%d, %d:%d %d\n',Ssample,Ssample+Lsample,StestA,StestA+Ltest,StestB,StestB+Ltest,trueTest);
 
+trialParams.ratio=ratio;
 trialParams.trueTest=trueTest;
 trialParams.Strue=Strue;
 trialParams.Sfalse=Sfalse;
