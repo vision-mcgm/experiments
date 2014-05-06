@@ -175,27 +175,28 @@ f=randi(size(g.folderList,1));
 
 sampleOffsetFace=randi(LtestFace-LsampleFace);
 sampleOffsetFire=randi(LtestFire-LsampleFire);
-trueTestFace=randi(2);
+trueTestFace=2%randi(2);
 switch trueTestFace
     case 1 %first
         SsampleFace=sampleOffsetFace+StestAFace;
         StrueFace=StestAFace;
-        SfalseFace=StestBFace;
+        YNFace=1;
     case 2 %second
         SsampleFace=sampleOffsetFace+StestBFace;
         StrueFace=StestBFace;
-        SfalseFace=StestAFace;
+        YNFace=0;
 end
-trueTestFire=randi(2);
+trueTestFire=1%randi(2);
 switch trueTestFire
     case 1 %first
         SsampleFire=sampleOffsetFire+StestAFire;
         StrueFire=StestAFire;
-        SfalseFire=StestBFire;
+        YNFire=1;
+
     case 2 %second
         SsampleFire=sampleOffsetFire+StestBFire;
         StrueFire=StestBFire;
-        SfalseFire=StestAFire;
+        YNFire=0;
 end
 
 if ~g.sim & real
@@ -216,7 +217,7 @@ end
 
 trialParams.trueTestFace=trueTestFace;
 trialParams.StrueFace=StrueFace;
-trialParams.SfalseFace=SfalseFace;
+
 trialParams.SsampleFace=SsampleFace;
 trialParams.StestAFace=StestAFace;
 trialParams.StestBFace=StestBFace;
@@ -227,12 +228,14 @@ trialParams.inv=inv;
 
 trialParams.trueTestFire=trueTestFire;
 trialParams.StrueFire=StrueFire;
-trialParams.SfalseFire=SfalseFire;
+
 trialParams.SsampleFire=SsampleFire;
 trialParams.StestAFire=StestAFire;
 trialParams.StestBFire=StestBFire;
 trialParams.LsampleFire=LsampleFire;
 trialParams.LtestFire=LtestFire;
+trialParams.YNFire=YNFire;
+trialParams.YNFace=YNFace;
 
 end
 
@@ -253,7 +256,7 @@ elseif tp.inv==2
 end
 %Play sample
 tp.time=now;
-firePause(1);
+
 fixationSpot([0 255 0]);
 
 if ~g.sim
@@ -268,11 +271,10 @@ if ~g.sim
     firePause(1);
     fixationSpot([0 255 0]);
     firePause(1);
-    playClip(tp.startTestAQFire,tp.LsampleFire,neg,direction,sampleRate,angle,location,chrom);
+    playClip(tp.startTestAQFire,tp.LtestFire,neg,direction,sampleRate,angle,location,chrom);
     fireClear;
     firePause(1);
     fixationSpot([0 0 255]);
-    firePause(1);
     
     
 %Get FIRST response
@@ -281,14 +283,14 @@ if g.sim
 elseif g.respSim
     response=randi(2)-1;
 else
-    response=getLR(); %0 for left, 1 for right
+    response=getYN(); 
 end
 flip;
 %Work out answer
 tp.correctFire=0;
-if tp.trueTestFire==1 %first
+if tp.YNFire==0 %absent
     if response==0 tp.correctFire=1; else tp.correctFire=0;end
-elseif tp.trueTestFire==2 %second
+elseif tp.trueTestFire==1 %present
     if response==1,tp.correctFire=1;else tp.correctFire=0;end
 end
 
@@ -299,9 +301,15 @@ if  g.feedback
     fireTextWait(answer);
 end
 
-    
+    fireClear;
+   
+    fixationSpot([0 255 0]);
+     firePause(1);
     playClip(tp.startTestAQFace,tp.LtestFace,neg,direction,sampleRate,angle,location,chrom);
-        fixationSpot([0 0 255]);
+       
+        fireClear;
+    fixationSpot([0 0 255]);
+    firePause(1);
         
         
 %Get SECOND response
@@ -310,14 +318,14 @@ if g.sim
 elseif g.respSim
     response=randi(2)-1;
 else
-    response=getLR(); %0 for left, 1 for right
+    response=getYN(); %0 for left, 1 for right
 end
 flip;
 %Work out answer
 tp.correctFace=0;
-if tp.trueTestFace==1 %first
+if tp.YNFace==0
     if response==0 tp.correctFace=1; else tp.correctFace=0;end
-elseif tp.trueTestFace==2 %second
+elseif tp.trueTestFace==1 %present
     if response==1,tp.correctFace=1;else tp.correctFace=0;end
 end
 
@@ -1151,6 +1159,64 @@ else
 end
 end
 
+function [r]=getYN()
+%Gets key response - 0 for down or 1 for up.
+global g;
+if g.sim
+    if rand < 0.3
+        r=1;
+    else
+        r=0;
+    end
+    
+else
+    
+    a = 0;
+    b=0;
+    while a == 0 && b ==0
+        %WaitSecs(0.2);
+        KbWait;
+        [ keyIsDown, kt, keyCode ] = KbCheck;
+        %keyCode is a 256-element list saying which keys are down, thus we must
+        %not truncate it
+        
+        response_key = KbName(keyCode);
+        %             a = strcmp(response_key, 'RightArrow');
+        %             b = strcmp(response_key, 'LeftArrow');
+        %If several keys are down, select only one
+        if strcmp(class(response_key),'cell'), response_key=response_key{1}; end
+        
+        if 1
+            if strcmp(response_key,'q')
+                exitExperiment();
+            end
+        end
+        a = strcmp(response_key, 'down') | strcmp(response_key,'DownArrow') ; %Mac
+        if a(1)==1; a=1; else a=0; end
+        %Covers the case where a is a vector
+        
+        
+        %Makes sure a is always 1 or 0 and not anything else
+        b = strcmp(response_key, 'up') | strcmp(response_key,'UpArrow');
+        if b(1)==1; b=1; else b=0; end
+        
+        %
+        if g.debugMode
+            if strcmp(response_key, 'k')
+                keyboard
+            end
+        end
+    end
+    
+    
+    if b
+        r=1;
+    else
+        r=0;
+    end
+end
+end
+
 function [ allTrialParams blockParamCells info params ] = fireReadParams(  )
 %Generates block params for experiment, and runs
 %ASSUMPTIONS: we have even block structure (same amount of trials per
@@ -1189,7 +1255,7 @@ params(1).scheme='inblock';
 
 
 blockReps=10; %Number of repetitions of each style of block
-conditionReps=30; %Number of repetitions of each condition. Must be divisible by blockReps
+conditionReps=50; %Number of repetitions of each condition. Must be divisible by blockReps
 conditionRepsPerBlock=conditionReps/blockReps;
 
 if mod(conditionReps,blockReps)
