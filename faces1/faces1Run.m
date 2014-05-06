@@ -162,7 +162,7 @@ end
 
 
 %Pick folder
-f=randi(size(g.folderList,1));
+f=randi(size(g.folderList,2));
     nf=g.folderNumFrames(f);
 
 %Pick separate samples
