@@ -4,8 +4,8 @@ function [  ] = faces1Run()
 clear all;
 global g;
 
-g.sim=1; %Simulate the run, not loading textures
-g.respSim=1;
+g.sim=0; %Simulate the run, not loading textures
+g.respSim=0;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -195,6 +195,7 @@ end
 
 fprintf('%d:%d, %d:%d, %d:%d %d\n',Ssample,Ssample+Lsample,StestA,StestA+Ltest,StestB,StestB+Ltest,trueTest);
 
+trialParams.ratio=ratio;
 trialParams.trueTest=trueTest;
 trialParams.Strue=Strue;
 trialParams.Sfalse=Sfalse;
