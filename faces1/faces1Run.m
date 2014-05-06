@@ -44,7 +44,7 @@ InitialiseExperiment();
 HideCursor;
 %ShowCursor;
 
-RunTraining();
+%RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
 
@@ -221,6 +221,7 @@ global g;
 trialParams.startSampleQ=0;
 trialParams.startTestAQ=0;
 trialParams.startTestBQ=0;
+trialParams.ratio=0;
 trialParams.trueTest=0;
 trialParams.Strue=0;
 trialParams.Sfalse=0;
