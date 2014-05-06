@@ -41,9 +41,10 @@ g.intercache=0;
 
 InitialiseFramework();
 InitialiseExperiment();
-ShowCursor;
-fireTextWait('Accuracy: ');
-%RunTraining();
+HideCursor;
+%ShowCursor;
+
+RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
 
@@ -61,14 +62,14 @@ end
 function RunTraining()
 global g;
 fireTextConfirm('Ready to start training.\nHit any key to start.');
-nTraining=30;
+nTraining=20;
 nWindow=10;
-trainingParamsCell{1}=1;
-trainingParamsCell{2}=0;
-trainingParamsCell{3}=0;
+trainingParamsCell{1}=50;
+trainingParamsCell{2}=1.2;
+
 for i=1:nTraining
     trainingParamsArray=fireScheduleTrial(trainingParamsCell);
-    CacheN(149);
+    makeSureAtLeastN(200);
     tps=fireTrial(trainingParamsArray);
     resps(i)=tps.correct;
     fireTextWait(['Accuracy: ' num2str(mean(resps(max(1,end-nWindow):end)))]);
@@ -77,8 +78,9 @@ end
 %VITAL: finish training
 g.feedback=0;
 g.training=0;
-fireTextConfirm('Training over. WAIT FOR THE EXPERIMENTER.');
-waitForX;
+fireTextConfirm(['Training over. WAIT FOR THE EXPERIMENTER.\n' 'Accuracy: ' num2str(mean(resps(max(1,end-nWindow):end)))]);
+pause(5)
+KbWait;
 end
 
 
@@ -102,7 +104,7 @@ end
 function RunExperiment
 global g;
 %VITAL: finish training
-g.feedback=1;
+g.feedback=0;
 g.training=0;
 
 
@@ -505,10 +507,11 @@ end
 
 function makeSureAtLeastN(n)
 global g;
+finished=0;
 if ~g.sim
-while g.FramesInVM<g.maxFramesInVM
+while g.FramesInVM<g.maxFramesInVM &~finished
     
-    LoadNextFrame();
+    finished=LoadNextFrame();
 end
 LoadNextFrame(); %Extra - hack!
 end
@@ -529,22 +532,27 @@ end
 LoadNextFrame(); %Extra - hack!
 end
 
-function LoadNextFrame()
+function finished=LoadNextFrame()
 global g;
-
+finished=0;
 %Check whether video memory is full or not before here!
 if ~g.sim
 if g.nextFrI <= size(g.FrameNumsQ,2) &&  g.FramesInVM < g.maxFramesInVM%It's a vector, so must reduce to one first!
+    %Check we're not at the end of the Q
+    if g.FrameNumsQ(g.nextFrI)~=0
     LoadFrame(g.fQ(g.nextFrI),g.FrameNumsQ(g.nextFrI),0,0);
     g.FramesInVM=g.FramesInVM+1;
     g.nextFrI=g.nextFrI+1;
+    else
+        finished=1;
+    end
 end
 end
 end
 
 function LoadFrame(f,n,negative,chromatic)
 global g;
-%Frame number, 
+%Folder list, frame number
 t=GetSecs();
 if negative
     imPath=[g.videoFolder 'negative\frame' num2str(n,g.decSpec) '.bmp'];
@@ -1038,7 +1046,7 @@ else
         %             a = strcmp(response_key, 'RightArrow');
         %             b = strcmp(response_key, 'LeftArrow');
         %If several keys are down, select only one
-        if strcmp(class(response_key),'cell'), response_key=response_key{1}; en
+        if strcmp(class(response_key),'cell'), response_key=response_key{1}; 
             if 1
                 if strcmp(response_key,'q')
                     exitExperiment();
