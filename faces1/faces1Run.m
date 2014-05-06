@@ -4,8 +4,8 @@ function [  ] = faces1Run()
 clear all;
 global g;
 
-g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.sim=1; %Simulate the run, not loading textures
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -186,6 +186,11 @@ if ~g.sim
     trialParams.startSampleQ=EnqueueFrames(f,Ssample,Lsample,neg,direction,sampleRate,angle,location,chrom);
     trialParams.startTestAQ=EnqueueFrames(f,StestA,Ltest,neg,direction,sampleRate,angle,location,chrom);
     [trialParams.startTestBQ lastQ]=EnqueueFrames(f,StestB,Ltest,neg,direction,sampleRate,angle,location,chrom);
+else
+    trialParams.startSampleQ=0;
+    trialParams.startTestAQ=0;
+    trialParams.startTestBQ=0;
+        lastQ=0;;
 end
 
 fprintf('%d:%d, %d:%d, %d:%d %d\n',Ssample,Ssample+Lsample,StestA,StestA+Ltest,StestB,StestB+Ltest,trueTest);
