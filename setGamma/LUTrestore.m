@@ -1,4 +1,4 @@
-function [  ] = videoCardTest()
+function [  ] = LUTrestore()
 %Parameters
 %FSN Jan 2013
 %try
@@ -7,24 +7,18 @@ global g;
 
 
 g.sim=0; %Simulate the run, not loading textures
-g.debugMode=1; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
 g.pause=1;
 g.smallPause=0.5;
 g.videoFolder='frames_2\';
+g.debugMode=1;
 g.monitor=2; %1 for monitor with start bar
 g.offset=100;
-g.frames=1000; %Number of frames to load in total
+g.frames=200; %Number of frames to load in total
 g.cropRect=[291   38  640  563]; %The rectangle of interest loaded from the images - x y length height
 g.areaLength=10*50; %secs: areas we take both samples from
 g.textColour=[0 0 0];
-g.clusterOutputFolder='Z:\Fintan\Experiments\fire4\autoOutput\';
-
-%Factor setup
-g.targetLengths=[1 3 6 12]; %In frames
-g.sampleLengths=[15 20 40]; %In frames
-g.samplesPerCondition=25;
 
 %We also have access to:
 % g.centreX,centreY,black
@@ -35,26 +29,35 @@ g.samplesPerCondition=25;
 
 %InitFramework must be called first as it sets groundwork variables
 
-InitialiseFramework();
-InitialiseExperiment();
-
-keyboard
-CheckAssertions;
-
-%firePractice();
+%InitialiseFramework();
+%InitialiseExperiment();
+%playClip(1,100,0,0,1,1,1);
 
 
 
 
+screens=Screen('Screens');
+sn=max(screens);
+[w1,windowRect]=Screen(sn,'OpenWindow',[127.5 127.5 127.5],[20 20 500 500],[],2);
+[w2,windowRect]=Screen(sn,'OpenWindow',[127.5 127.5 127.5],[500 20 1000 500],[],2);
 
-%catch
-% Screen('CloseAll');
-% ShowCursor;
-%Priority(0);
-% psychrethrow(psychlasterror);
-%end
-%Screen('CloseAll');
-exitExperiment();
+
+%epar.GAMMA_TABLE = 'C:\Documents and Settings\Vision\My Documents\Downloads\GAMMA_CORRECTION/lut/nec-juin-2011';
+%epar.doGamma = 1;
+%[newGamma oldGamma]=exp_mon_init(w2,epar)
+
+load('oldGamma');
+
+
+
+tx1=Screen('MakeTexture',w1,imread('imgTest.bmp'));
+tx2=Screen('MakeTexture',w2,imread('imgTest.bmp'));
+
+Screen('LoadNormalizedGammaTable',w1,oldGamma);
+
+
+sca
+ShowCursor;
 
 
 %fclose all;
@@ -65,11 +68,7 @@ end
 
 %----------------------------------------------------BEGIN PROJECT SPECIFIC HELPER FUNCTIONS
 
-function []=CheckAssertions()
-global g;
-%Assertions
-assert(g.frames > 3*(max(g.sampleLengths) ));
-end
+
 
 function []=InitialiseExperiment()
 global g;
@@ -87,22 +86,17 @@ g.w=g.cropRect(3);
 
 
 
-
 % Preallocate movie structure.
 mov(1:g.frames) = ...
     struct('cdata', zeros(g.h, g.w, 3, 'uint8'),...
     'colormap', []);
 
-
-    img=imread([g.videoFolder list(1).name]);
-    img=img(g.cropRect(2):g.cropRect(2)+g.cropRect(4),...
-            g.cropRect(1):g.cropRect(1)+g.cropRect(3),:);
-    for k = 1 :10000
+if ~g.sim
+    for k = 1 :g.frames
         k
-        memory
-        fireTextNoWait(num2str(k));
-        
-        
+        img=imread([g.videoFolder list(k).name]);
+        img=img(g.cropRect(2):g.cropRect(2)+g.cropRect(4),...
+            g.cropRect(1):g.cropRect(1)+g.cropRect(3),:);
         %  altImg=imread([alteredFolder list(k).name]);
         %  altImg=altImg(g.cropRect(2):g.cropRect(2)+g.cropRect(4),...
         % g.cropRect(1):g.cropRect(1)+g.cropRect(3),:);
@@ -115,7 +109,7 @@ mov(1:g.frames) = ...
         % tex=g.texes(k);
         
     end
-
+end
 %This assumes that frames are numbered strictly alphabetically (leading
 %zeros)
 end
@@ -178,8 +172,6 @@ end
 function [correct]=fireTrial(targetLength,sampleLength)
 global g;
 
-
-
 %Pick target area
 areaStart=randi(g.frames-g.areaLength);
 
@@ -235,11 +227,9 @@ if g.sim, r=randi(2)-1;
 else r=getLR(); end
 respClipNumber=xor(r,swapOrder)+1;
 if respClipNumber==targetSource, correct=1; else correct=0; end
-
+correct
 respLog([num2str(targetSource) ' ' num2str(swapOrder) ' ' num2str(correct)...
-    ' ' num2str(startA) ' ' num2str(startB) ' ' num2str(targetOffset) ' '...
-    num2str(targetLength) ' ' num2str(sampleLength)]);
-['Sample length ' num2str(sampleLength)]
+    ' ' num2str(startA) ' ' num2str(startB) ' ' num2str(targetOffset)]);
 end
 
 function [  ] = playClip( start,length,negative,backwards,interval,regime,location )
@@ -248,9 +238,6 @@ global g;
 %Regimes:
 % 1 Forwards
 % 2 Negative
-if g.sim
-    return
-end
 clear timestamps
 fList=0:length-1;
 fList=interval.*floor(fList/interval);
@@ -335,9 +322,9 @@ if ~g.sim
     for i=1:size(timestamps,2)-1
         diffs(i)=timestamps(i+1)-timestamps(i);
     end
-%     'Framerate'
-%     1/mean(diffs)
-%     std(diffs)
+    'Framerate'
+    1/mean(diffs)
+    std(diffs)
 end
 end
 
@@ -346,9 +333,7 @@ end
 
 function []=flip()
 global g;
-if ~g.sim
 Screen('Flip',g.window);
-end
 end
 
 function[]=fKbWait()
@@ -360,28 +345,18 @@ function [] = InitialiseFramework()
 %Sets up PsychToolbox and other parts of the experimental framework
 global g;
 
-if g.sim, g.pause=0; g.smallPause=0; end
+if g.sim, g.pause=0; end
 if ~g.debugMode
     g.subjectName=input('Enter subject initials: ','s');
 else
     g.subjectName='test';
 end
-g.logFileName=[g.subjectName '_log.txt'];
-g.logFileID=fopen(['output\' g.logFileName],'w');
+
+g.logFileID=fopen([ 'output\' g.subjectName '_log.txt'],'w');
 assert(g.logFileID ~= -1); %Check file is really open
 fireLog(['Starting experiment on subject ' g.subjectName]);
-g.responseFileName=[g.subjectName '_results.txt'];
-g.responseFileID=fopen([ 'output\' g.responseFileName],'w');
+g.responseFileID=fopen([ 'output\' g.subjectName '_results.txt'],'w');
 
-%Check cluster connection
-
-if ~g.debugMode
-    try
-        ls(g.clusterOutputFolder);
-    catch
-        error('Cannot mount output folder!');
-    end
-end
 
 if ~g.debugMode;  HideCursor(); end
 
@@ -395,7 +370,7 @@ screenNumber=max(screens);
 if ~g.sim
     if g.debugMode
         %[g.window,windowRect]=Screen(screenNumber,'OpenWindow',0,[20 20 800 800],[],2);
-        [g.window,windowRect]=Screen(screenNumber,'OpenWindow',[127.5 127.5 127.5],[20 20 200 200],[],2);
+        [g.window,windowRect]=Screen(screenNumber,'OpenWindow',[127.5 127.5 127.5],[20 20 700 700],[],2);
     else
         [g.window,windowRect]=Screen(screenNumber,'OpenWindow',[127.5 127.5 127.5],[],[],2);
     end
@@ -470,14 +445,6 @@ if ~g.sim
 end
 end
 
-function fireTextNoWait(s)
-global g;
-if ~g.sim
-    DrawFormattedText(g.window,s,'center','center',g.textColour)
-    Screen('Flip',g.window);
-end
-end
-
 function []=fixationSpot(varargin)
 global g;
 if nargin==0, colour=[0 0 0];
@@ -504,13 +471,8 @@ end
 
 
 function [r]=exitExperiment()
-global g;
-fclose all
 sca
 ShowCursor;
-copyfile(['output\' g.logFileName],[g.clusterOutputFolder g.logFileName]);
-copyfile(['output\' g.responseFileName],[g.clusterOutputFolder g.responseFileName]);
-
 keyboard
 end
 
