@@ -5,7 +5,7 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -44,7 +44,7 @@ InitialiseExperiment();
 HideCursor;
 %ShowCursor;
 
-%RunTraining();
+RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
 
@@ -514,6 +514,7 @@ function loadLayout(layPath)
 end
 
 function makeSureAtLeastN(n)
+fprintf('mksln\n');
 global g;
 finished=0;
 if ~g.sim
@@ -521,7 +522,7 @@ while g.FramesInVM<g.maxFramesInVM &~finished
     
     finished=LoadNextFrame();
 end
-LoadNextFrame(); %Extra - hack!
+%LoadNextFrame(); %Extra - hack!
 end
 end
 
@@ -542,6 +543,7 @@ end
 
 function finished=LoadNextFrame()
 global g;
+fprintf('lnfr\n');
 finished=0;
 %Check whether video memory is full or not before here!
 if ~g.sim
@@ -559,6 +561,7 @@ end
 end
 
 function LoadFrame(f,n,negative,chromatic)
+fprintf('lfr\n');
 global g;
 %Folder list, frame number
 t=GetSecs();
