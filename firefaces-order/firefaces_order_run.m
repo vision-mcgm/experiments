@@ -733,6 +733,7 @@ elseif angleCode==3
 elseif angleCode==4
     angle=180;
 end
+angle=0;
 
 if location==1
     rect=[g.centreX-(g.w/2)-g.offset g.centreY-(g.h/2) g.centreX+(g.w/2)-g.offset g.centreY+(g.h/2)];
