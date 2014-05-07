@@ -44,7 +44,7 @@ InitialiseFramework();
 InitialiseExperiment();
 HideCursor;
 
-%RunTraining();
+RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
 
@@ -62,7 +62,7 @@ end
 function RunTraining()
 global g;
 fireTextConfirm('Ready to start training.\nHit any key to start.');
-nTraining=30;
+nTraining=2;
 nWindow=10;
 trainingParamsCell{1}=1;
 
@@ -1099,7 +1099,7 @@ else
         %             a = strcmp(response_key, 'RightArrow');
         %             b = strcmp(response_key, 'LeftArrow');
         %If several keys are down, select only one
-        if strcmp(class(response_key),'cell'), response_key=response_key{1}; en
+        if strcmp(class(response_key),'cell'), response_key=response_key{1}; 
             if 1
                 if strcmp(response_key,'q')
                     exitExperiment();
@@ -1273,7 +1273,7 @@ params(1).scheme='inblock';
 
 
 blockReps=10; %Number of repetitions of each style of block
-conditionReps=50; %Number of repetitions of each condition. Must be divisible by blockReps
+conditionReps=60; %Number of repetitions of each condition. Must be divisible by blockReps
 conditionRepsPerBlock=conditionReps/blockReps;
 
 if mod(conditionReps,blockReps)
