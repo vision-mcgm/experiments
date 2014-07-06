@@ -4,8 +4,13 @@ function [  ] = fire22Run()
 clear all;
 global g;
 
+<<<<<<< HEAD
 g.sim=0; %Simulate the run, not loading textures
 g.respSim=1;
+=======
+g.sim=1; %Simulate the run, not loading textures
+g.respSim=0;
+>>>>>>> b2d15d40ac189f8ad886d9185229898ffc4569b1
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -34,7 +39,7 @@ g.missed=0;
 g.areaLength=0.5*50; %secs: areas we take both samples from
 g.sampleLength=0.4*50;
 g.exName='fire17';
-m=machineParams;
+%m=machineParams;
 g.maxFramesInVM=500;
 g.intercache=0;
 
@@ -87,7 +92,7 @@ g.FramesInVM=0;
 g.nQ=1;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
-g.allTrialParamsArray(1400)=fireScheduleTrial(allTrialParams(1,:));
+g.allTrialParamsArray(1400)=fireFakeScheduleTrial();
 
 for i=1:g.info.nTrials
     i
@@ -180,6 +185,26 @@ trialParams.Ltest=Ltest;
 trialParams;
 end
 
+
+function trialParams=fireFakeScheduleTrial() 
+%Makes a fake trial params structure so that we can preallocate the array
+global g;
+if ~g.sim
+trialParams.startAQ=0;
+trialParams.startBQ=0;
+end
+trialParams.Lpre=0;
+trialParams.Lpost=0;
+trialParams.YN=0;
+trialParams.Stest=0;
+trialParams.Sfalse=0;
+trialParams.Ssample=0;
+trialParams.source=0;
+trialParams.Lsample=0;
+trialParams.Ltest=0;
+
+end
+
 function [tp]=fireTrial(tp)
 global g;
 neg=0;
@@ -209,8 +234,13 @@ end
 %Get response
 if g.sim
     response=makeResponse(direction,sampleRate);
+    tPress=GetSecs;
 elseif g.respSim
+<<<<<<< HEAD
     response=randi(4)-1;
+=======
+    response=randi(2)-1;
+>>>>>>> b2d15d40ac189f8ad886d9185229898ffc4569b1
     tPress=GetSecs;
 else
     [response,tPress]=getConfidence();
@@ -231,7 +261,9 @@ else
     tp.certain=0;
 end
 
+if ~g.sim
 tp.rt=tPress-t0;
+end
 
 if g.sim
     
