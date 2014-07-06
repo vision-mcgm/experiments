@@ -252,7 +252,9 @@ else
     tp.certain=0;
 end
 
+if ~g.sim
 tp.rt=tPress-t0;
+end
 
 if g.sim
     
