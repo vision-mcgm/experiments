@@ -1,3 +1,4 @@
+
 function [  ] = fire22Run()
 %Backwards detection over sampling rates
 %Parameters
@@ -5,7 +6,7 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -293,7 +294,7 @@ list=dir([g.videoFolder 'normal/*.bmp']);
 %alteredFolder=[g.videoFolder '\altered\'];
 %alteredList=dir([alteredFolder '*.bmp']);
 img=imread([g.videoFolder 'normal/' list(1).name]);
-img=imresize(img,g.scaling);
+%img=imresize(img,g.scaling);
 vidHeight = size(img,1);
 vidWidth = size(img,2);
 g.h=vidHeight;
