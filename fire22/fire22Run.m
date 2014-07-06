@@ -231,6 +231,7 @@ if g.sim
     response=makeResponse(direction,sampleRate);
 elseif g.respSim
     response=randi(2)-1;
+    tPress=GetSecs;
 else
     [response,tPress]=getConfidence();
 end
