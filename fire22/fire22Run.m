@@ -4,8 +4,8 @@ function [ ] = fire22Run()
 clear all;
 global g;
 
-g.sim=1; %Simulate the run, not loading textures
-g.respSim=0;
+g.sim=0; %Simulate the run, not loading textures
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
