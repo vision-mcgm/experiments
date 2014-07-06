@@ -5,7 +5,7 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -210,7 +210,8 @@ end
 if g.sim
     response=makeResponse(direction,sampleRate);
 elseif g.respSim
-    response=randi(2)-1;
+    response=randi(4)-1;
+    tPress=GetSecs;
 else
     [response,tPress]=getConfidence();
 end
