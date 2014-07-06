@@ -1,4 +1,4 @@
-function [  ] = firefaces_order_run()
+function [  ] = fire22Run()
 %Backwards detection over sampling rates
 %Parameters
 clear all;
@@ -11,8 +11,7 @@ g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
 g.pause=1;
 g.smallPause=0.5;
-g.fireFolder='..\..\cropped_20-24mins\normal\';
-g.videoFolder='../../faceframes/'
+g.videoFolder='../../cropped_20-24mins/'
 g.monitor=1; %1 for monitor with start bar
 g.offset=200;
 g.frames=10000; %Number of frames to load in total
@@ -35,23 +34,19 @@ g.missed=0;
 g.areaLength=0.5*50; %secs: areas we take both samples from
 g.sampleLength=0.4*50;
 g.exName='fire17';
-%m=machineParams;
+m=machineParams;
 g.maxFramesInVM=500;
 g.intercache=0;
 
 
 InitialiseFramework();
 InitialiseExperiment();
-HideCursor;
+ShowCursor;
 
 %RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
-
-
 RunExperiment();
-
-keyboard
 exitExperiment();
 end
 
@@ -62,15 +57,16 @@ end
 function RunTraining()
 global g;
 fireTextConfirm('Ready to start training.\nHit any key to start.');
-nTraining=2;
+nTraining=30;
 nWindow=10;
 trainingParamsCell{1}=1;
-
+trainingParamsCell{2}=0;
+trainingParamsCell{3}=0;
 for i=1:nTraining
-    trainingParamsArray=fireScheduleTrial(trainingParamsCell,1);%Real
-    makeSureAtLeastN(500);
+    trainingParamsArray=fireScheduleTrial(trainingParamsCell);
+    CacheN(200);
     tps=fireTrial(trainingParamsArray);
-    resps(i)=tps.correctFire;
+    resps(i)=tps.correct;
     fireTextWait(['Accuracy: ' num2str(mean(resps(max(1,end-nWindow):end)))]);
 end
 
@@ -84,35 +80,34 @@ end
 
 function ScheduleExperiment
 global g;
+%Init
+g.nextFrI=1;
+g.FramesInVM=0;
 
+g.nQ=1;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
-g.allTrialParamsArray(1400)=fireScheduleTrial(allTrialParams(1,:),0);%Fake!
+g.allTrialParamsArray(1400)=fireScheduleTrial(allTrialParams(1,:));
 
 for i=1:g.info.nTrials
     i
-    g.allTrialParamsArray(i)=fireScheduleTrial(allTrialParams(i,:),1);
+    g.allTrialParamsArray(i)=fireScheduleTrial(allTrialParams(i,:));
     if i==1
-        g.allTrialParamsArray(g.info.nTrials)= g.allTrialParamsArray(1);
+         g.allTrialParamsArray(g.info.nTrials)= g.allTrialParamsArray(1);
     end
-    g.trial=g.trial+1;
 end
 end
 
 function RunExperiment
 global g;
-%VITAL: finish training
-g.feedback=1;
+makeSureAtLeastN(200);
+trial=1;
+g.feedback=0;
 g.training=0;
 
-
-makeSureAtLeastN(500);
-trial=1;
-g.trial=1;
 for b=1:g.info.nBlocks
     fireTextConfirm(['Block ' num2str(b) ' of ' num2str(g.info.nBlocks) ' is about to start.\nHit any key to begin.']);
     for tInBlock=1:g.info.nTrialsPerBlock
-        prevFinVM=g.FramesInVM;
         fprintf('%d %d %d\n');
         tstart=now;
         thisTrialParams=fireTrial(g.allTrialParamsArray(trial));
@@ -120,13 +115,10 @@ for b=1:g.info.nBlocks
         thisTrialParams.tend=now;
         thisTrialParams.tstart=tstart;
         tps(trial)=thisTrialParams;
-        % assert(g.FramesInVM==prevFinVM-(thisTrialParams.Lsample+thisTrialParams.Ltest));
         respSave(tps);
-        trial=trial+1;
-        g.trial=g.trial+1;
+        trial=trial+1
         makeSureAtLeastN(500);
     end
-    
     fireTextConfirm(['You have finished block ' num2str(b) ' of ' num2str(g.info.nBlocks) '.\nPlease have a short break, then hit any key to continue.']);
 end
 
@@ -134,111 +126,59 @@ end
 end
 
 
-function trialParams=fireScheduleTrial(paramCell,real)
+function trialParams=fireScheduleTrial(paramCell) 
 %Matlab treats a passed cell array as multiple functions
 %Loads frames into the video queue for a particular trial
 %Remember we assume each frame will only be used once
 global g;
-%WIRING - careful with this
-%inv=paramCell{1};
-inv=1;
-trialParams.order=paramCell{1};
-
-%END WIRING
-LsampleFire=100;
-LsampleFace=100;
-ratio=1.2
-
-LtestFace=LsampleFace*ratio;
-LtestFire=LsampleFire*ratio;
+%Leftover vars
 neg=0;
 chrom=0;
 location=3;
 direction=0;
 sampleRate=1;
+angle=1;
+Lsample=50;
+%Extract params
+%CAREFUL WIRING THIS UP
 
-if inv==1
-    angle=0;
-elseif inv==2
-    angle=180;
+Lpre=paramCell{1};
+Lpost=paramCell{2};
+
+Ltest=Lsample+Lpre+Lpost;
+
+%Pick target area
+[Stest Sfalse]=pickSeparateSamples(g.frames, Ltest);
+source=randi(2);
+%Pick start point within sample
+sampleOffset=Lpre;
+YN=randi(2);
+
+switch YN
+    case 1 %Yes
+        Ssample=sampleOffset+Stest;
+    case 2 %No
+        Ssample=sampleOffset+Sfalse;
 end
 
-
-%Pick folder
-f=randi(size(g.folderList,1));
-nf=g.folderNumFrames(f);
-
-%Pick separate samples
-[StestAFace StestBFace]=pickSeparateSamples(nf, LtestFace);
-[StestAFire StestBFire]=pickSeparateSamples(g.frames, LtestFire);
-
-sampleOffsetFace=randi(LtestFace-LsampleFace);
-sampleOffsetFire=randi(LtestFire-LsampleFire);
-trueTestFace=randi(2);
-switch trueTestFace
-    case 1 %first
-        SsampleFace=sampleOffsetFace+StestAFace;
-        StrueFace=StestAFace;
-        YNFace=1;
-    case 2 %second
-        SsampleFace=sampleOffsetFace+StestBFace;
-        StrueFace=StestBFace;
-        YNFace=0;
+%Copy params to tp
+if ~g.sim
+    trialParams.startAQ=EnqueueFrames(Ssample,Lsample,neg,direction,sampleRate,angle,location,chrom);
+    trialParams.startBQ=EnqueueFrames(Stest,Ltest,neg,direction,sampleRate,angle,location,chrom);
 end
-trueTestFire=randi(2);
-switch trueTestFire
-    case 1 %first
-        SsampleFire=sampleOffsetFire+StestAFire;
-        StrueFire=StestAFire;
-        YNFire=1;
-        
-    case 2 %second
-        SsampleFire=sampleOffsetFire+StestBFire;
-        StrueFire=StestBFire;
-        YNFire=0;
+%xpt-specific
+trialParams.Lpre=Lpre;
+trialParams.Lpost=Lpost;
+trialParams.YN=YN;
+trialParams.Stest=Stest;
+trialParams.Sfalse=Sfalse;
+trialParams.Ssample=Ssample;
+trialParams.source=source;
+trialParams.Lsample=Lsample;
+trialParams.Ltest=Ltest;
+%Common
+trialParams;
 end
-
-if ~g.sim & real
-    trialParams.startSampleQFace=EnqueueFrames(f,SsampleFace,LsampleFace,neg,direction,sampleRate,angle,location,chrom);
-    trialParams.startTestAQFace=EnqueueFrames(f,StestAFace,LtestFace,neg,direction,sampleRate,angle,location,chrom);
-    fFire=99;
-    trialParams.startSampleQFire=EnqueueFrames(fFire,SsampleFire,LsampleFire,neg,direction,sampleRate,angle,location,chrom);
-    trialParams.startTestAQFire=EnqueueFrames(fFire,StestAFire,LtestFire,neg,direction,sampleRate,angle,location,chrom);
-else
-    %Because this function makes us a fake trial too
-    trialParams.startSampleQFace=0;
-    trialParams.startTestAQFace=0;
-    trialParams.startSampleQFire=0;
-    trialParams.startTestAQFire=0;
-end
-
-
-
-trialParams.trueTestFace=trueTestFace;
-trialParams.StrueFace=StrueFace;
-
-trialParams.SsampleFace=SsampleFace;
-trialParams.StestAFace=StestAFace;
-trialParams.StestBFace=StestBFace;
-trialParams.LsampleFace=LsampleFace;
-trialParams.LtestFace=LtestFace;
-trialParams.folderFace=f;
-trialParams.inv=inv;
-
-trialParams.trueTestFire=trueTestFire;
-trialParams.StrueFire=StrueFire;
-
-trialParams.SsampleFire=SsampleFire;
-trialParams.StestAFire=StestAFire;
-trialParams.StestBFire=StestBFire;
-trialParams.LsampleFire=LsampleFire;
-trialParams.LtestFire=LtestFire;
-trialParams.YNFire=YNFire;
-trialParams.YNFace=YNFace;
-
-end
-
-
 
 function [tp]=fireTrial(tp)
 global g;
@@ -248,107 +188,63 @@ location=3;
 length=100;
 direction=0;
 sampleRate=1;
-if tp.inv==1
-    angle=1;
-elseif tp.inv==2
-    angle=4;
-end
+angle=1;
 %Play sample
-tp.time=now;
-
+firePause(1);
 fixationSpot([0 255 0]);
-
-if tp.order==1
-    startA=tp.startSampleQFace;
-    LA=tp.LsampleFace;
-    startB=tp.startSampleQFire;
-    LB=tp.LsampleFire;
-elseif tp.order==2
-    startA=tp.startSampleQFire;
-    LA=tp.LsampleFire;
-    startB=tp.startSampleQFace;
-    LB=tp.LsampleFace;
-end
 
 if ~g.sim
     pause(1);
-    playClip(startA,LA,neg,direction,sampleRate,angle,location,chrom);
+    playClip(tp.startAQ,tp.Lsample,neg,direction,sampleRate,angle,location,chrom);
     fireClear;
     firePause(1);
     fixationSpot([0 255 0]);
     firePause(1);
-    playClip(startB,LB,neg,direction,sampleRate,angle,location,chrom);
-    fireClear;
-    firePause(1);
-    fixationSpot([0 255 0]);
-    firePause(1);
-    playClip(tp.startTestAQFire,tp.LtestFire,neg,direction,sampleRate,angle,location,chrom);
-    fireClear;
-    firePause(1);
-    fixationSpot([0 0 255]);
+    
+    playClip(tp.startBQ,tp.Ltest,neg,direction,sampleRate,angle,location,chrom);
+    t0=GetSecs;
+        fixationSpot([0 0 255]);
 end
 
-%Get FIRST response
+%Get response
 if g.sim
     response=makeResponse(direction,sampleRate);
 elseif g.respSim
     response=randi(2)-1;
 else
-    response=getYN();
+    [response,tPress]=getConfidence();
 end
 flip;
 %Work out answer
-tp.correctFire=0;
-if tp.YNFire==0 %absent
-    if response==0 tp.correctFire=1; else tp.correctFire=0;end
-elseif tp.trueTestFire==1 %present
-    if response==1,tp.correctFire=1;else tp.correctFire=0;end
+tp.correct=0;
+if tp.YN==1 %yes
+    if response==0 | response==1, tp.correct=0; else tp.correct=1;end
+elseif tp.YN==2 %no
+    if response==0 | response==1,tp.correct=1;else tp.correct=0;end
 end
 
-tp.LR=response;
+tp.response=response;
+if response==0 | response==3
+    tp.certain=1;
+else
+    tp.certain=0;
+end
+
+tp.rt=tPress-t0;
+
+if g.sim
+    
+        if rand() <0.6
+            tp.correct=1;else tp.correct=0;end
+   
+end
+
 %Remember to use tp.correct not correct
-if  g.feedback
-    if tp.correctFire, answer='Correct';, else answer='Incorrect';,end
+
+if g.feedback
+    if tp.correct, answer='Correct';, else answer='Incorrect';,end
     fireTextWait(answer);
 end
-
-if ~g.sim
-    fireClear;
-    
-    fixationSpot([0 255 0]);
-    firePause(1);
-    playClip(tp.startTestAQFace,tp.LtestFace,neg,direction,sampleRate,angle,location,chrom);
-    
-    fireClear;
-    fixationSpot([0 0 255]);
-    firePause(1);
-    
-    
-    %Get SECOND response
-    if g.sim
-        response=makeResponse(direction,sampleRate);
-    elseif g.respSim
-        response=randi(2)-1;
-    else
-        response=getYN(); %0 for left, 1 for right
-    end
-    flip;
-    %Work out answer
-    tp.correctFace=0;
-    if tp.YNFace==0
-        if response==0 tp.correctFace=1; else tp.correctFace=0;end
-    elseif tp.trueTestFace==1 %present
-        if response==1,tp.correctFace=1;else tp.correctFace=0;end
-    end
-    
-    tp.LR=response;
-    %Remember to use tp.correct not correct
-    if  g.feedback
-        if tp.correctFace, answer='Correct';, else answer='Incorrect';,end
-        fireTextWait(answer);
-    end
-end
-
 end
 
 function []=CheckAssertions()
@@ -374,36 +270,39 @@ if ~g.sim
 end
 %We need to know the video dimensions
 
-list=dir([g.videoFolder ]);
-g.dirList=list;
-nDirs=size(list,1);
-
-for i=1:nDirs
-    l=dir([g.videoFolder list(i).name '*.bmp']);
-    g.nByFolder(i)=size(l,1);
-end
-
-it=1;
-for i=1:size(list,1)
-    if isdir([g.videoFolder list(i).name]) && ~strcmp(list(i).name,'.') && ~strcmp(list(i).name,'..')
-        g.folderList{it}=[g.videoFolder list(i).name '/'];
-        
-        framesList=dir([g.folderList{it} '*.bmp']);
-        g.folderNumFrames(it)=size(framesList,1);
-        it=it+1;
-    end
-end
-g.folderList{99}=g.fireFolder;
+list=dir([g.videoFolder 'normal/*.bmp']);
 %alteredFolder=[g.videoFolder '\altered\'];
 %alteredList=dir([alteredFolder '*.bmp']);
-tempList=dir([g.folderList{1} '*.bmp']);
-img=imread([g.folderList{1}  tempList(1).name]);
+img=imread([g.videoFolder 'normal/' list(1).name]);
 img=imresize(img,g.scaling);
 vidHeight = size(img,1);
 vidWidth = size(img,2);
 g.h=vidHeight;
 g.w=vidWidth;
 g.prevTextures=[];
+
+if 0
+    for k = 1 :g.frames
+        k;
+        fireTextNoWait(num2str(k));
+        img=imread([g.videoFolder list(k).name]);
+        img=img(g.cropRect(2):g.cropRect(2)+g.cropRect(4),...
+            g.cropRect(1):g.cropRect(1)+g.cropRect(3),:);
+        %  altImg=imread([alteredFolder list(k).name]);
+        %  altImg=altImg(g.cropRect(2):g.cropRect(2)+g.cropRect(4),...
+        % g.cropRect(1):g.cropRect(1)+g.cropRect(3),:);
+        
+        % mov(k).cdata = read(xyloObj ,mod(k,nFrames)+1);
+        
+        g.texes(k)=Screen('MakeTexture',g.window,img);
+        % g.texes(g.frames+k)=Screen('MakeTexture',g.window,altImg);
+        
+        % tex=g.texes(k);
+        
+    end
+end
+%This assumes that frames are numbered strictly alphabetically (leading
+%zeros)
 end
 
 function []=firePractice(n)
@@ -460,7 +359,7 @@ end
 
 
 
-function [startQ,endQ]=EnqueueFrames(f,start,length,negative,backwards,interval,angle,location,chromatic)
+function startQ=EnqueueFrames(start,length,negative,backwards,interval,angle,location,chromatic)
 global g;
 if ~g.sim
     %Plays a constant clip starting at start with a certain length
@@ -489,32 +388,47 @@ if ~g.sim
     %Now we have the final frame list, so can cache.
     
     nTexes=size(fList,2);
+    
     if ~g.sim
         for k=1:nTexes
             if k==1
-                startQ=EnqueueFrame(f,fList(k));
+                 startQ=EnqueueFrame(fList(k));
             else
-                endQ=EnqueueFrame(f,fList(k));
+                EnqueueFrame(fList(k));
             end
-            
+            %         k;
+            %         if negative
+            %             imPath=[g.videoFolder 'negative\frame' num2str(fList(k),g.decSpec) '.bmp'];
+            %         end
+            %         if chromatic
+            %             imPath=[g.videoFolder 'hue\frame' num2str(fList(k),g.decSpec) '.bmp'];
+            %             im=imread(imPath);
+            %             im=uint8(im);
+            %             im=im*255;
+            %         else
+            %             imPath=[g.videoFolder 'normal/frame' num2str(fList(k),g.decSpec) '.bmp'];
+            %             im=imread(imPath);
+            %         end
+            %         if g.resize
+            %             im=imresize(im,g.scaling);
+            %         end
+            %         tex=Screen('MakeTexture',g.window,im);
+            %         g.texes(fList_handles(k))=tex;
+            %         g.prevTextures=[g.prevTextures tex];
         end
     end
-    fireLog([num2str(g.trial) ': enqueue ' num2str(fList(1)) ' at ' num2str(startQ) ' l ' num2str(nTexes)])
     time=GetSecs-Tstart;
     period=time/length;
     %fprintf('%d textures loaded in %d, %d per tex\n',length,time,period);
 end
 end
 
-function nQ=EnqueueFrame(f,n)
+function nQ=EnqueueFrame(n)
 global g;
 g.nQ=g.nQ+1;
-%G.nQ is the number in the queue at the moment. It starts at 0
 %g.FrameNumsQ=[g.FrameNumsQ n];
-
-g.FrameNumsQ(g.nQ)=n;
-g.fQ(g.nQ)=f;
-%Append produces a row vec
+g.FrameNumsQ(g.nQ+1)=n;
+ %Append produces a row vec
 nQ=g.nQ;
 end
 
@@ -559,13 +473,11 @@ end
 
 function makeSureAtLeastN(n)
 global g;
-finished=0;
 if ~g.sim
-    while g.FramesInVM<g.maxFramesInVM & ~finished
-        
-        finished=LoadNextFrame();
-    end
-    LoadNextFrame(); %Extra - hack!
+while g.FramesInVM<g.maxFramesInVM
+    
+    LoadNextFrame();
+end
 end
 end
 
@@ -581,30 +493,23 @@ t=tic;
 for i=1:n
     LoadNextFrame();
 end
-LoadNextFrame(); %Extra - hack!
 end
 
-function finished=LoadNextFrame()
+function LoadNextFrame()
 global g;
-finished=0;
+
 %Check whether video memory is full or not before here!
 if ~g.sim
-    if g.nextFrI <= size(g.FrameNumsQ,2) &&  g.FramesInVM < g.maxFramesInVM%It's a vector, so must reduce to one first!
-        %Check if we have got to the end of the queue
-        if g.FrameNumsQ(g.nextFrI) ~=0
-            LoadFrame(g.fQ(g.nextFrI),g.FrameNumsQ(g.nextFrI),0,0);
-            g.FramesInVM=g.FramesInVM+1;
-            g.nextFrI=g.nextFrI+1;
-        else
-            finished=1;
-        end
-    end
+if g.nextFrI <= size(g.FrameNumsQ,2) &&  g.FramesInVM < g.maxFramesInVM%It's a vector, so must reduce to one first!
+    LoadFrame(g.FrameNumsQ(g.nextFrI),0,0);
+    g.FramesInVM=g.FramesInVM+1;
+    g.nextFrI=g.nextFrI+1;
+end
 end
 end
 
-function LoadFrame(f,n,negative,chromatic)
+function LoadFrame(n,negative,chromatic)
 global g;
-%Frame number,
 t=GetSecs();
 if negative
     imPath=[g.videoFolder 'negative\frame' num2str(n,g.decSpec) '.bmp'];
@@ -615,8 +520,7 @@ if chromatic
     im=uint8(im);
     im=im*255;
 else
-    
-    imPath=[g.folderList{f} 'frame' num2str(n,g.decSpec) '.bmp'];
+    imPath=[g.videoFolder 'normal/frame' num2str(n,g.decSpec) '.bmp'];
     im=imread(imPath);
 end
 if g.resize
@@ -627,7 +531,7 @@ g.texes(g.nextFrI)=tex;
 g.numsByTex(g.nextFrI)=n;
 % g.testTex=tex;
 t=GetSecs()-t;
-fprintf('Frame %d loaded in %d to tex %d, %d in VM\n',n,t,tex,g.FramesInVM);
+fprintf('Frame q %d loaded in %d to tex %d, %d in VM\n',n,t,tex,g.FramesInVM);
 end
 
 function [  ] = cacheClip( start,length,negative,backwards,interval,regime,location,chromatic )
@@ -658,8 +562,6 @@ fList;
 %Now we have the final frame list, so can cache.
 
 nTexes=size(fList,2);
-
-fireLog(['caching ' num2str(fList(1)) ' ' num2str(fList(end))]);
 
 if ~g.sim
     for k=1:nTexes
@@ -762,7 +664,7 @@ if ~g.sim
             %doesn't return until the flip has happened.
             t1=GetSecs();
             [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] = Screen('Flip', g.window);
-            Screen('Close',g.texes(k));
+               Screen('Close',g.texes(k));
             g.FramesInVM=g.FramesInVM-1;
             t2=GetSecs();
             % fprintf('Free time was %d\n',t2-t1);
@@ -772,16 +674,16 @@ if ~g.sim
             
             % [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] =
             % Screen('Flip', g.window,nextStamp); %Original
-            if  g.intercache
-                t1=GetSecs();
-                expFree=nextStamps(it)-t1;
-                if expFree>0.015;
-                    LoadNextFrame();
-                    %  fprintf('Doing work\n');
-                end
+           if  g.intercache
+               t1=GetSecs();
+            expFree=nextStamps(it)-t1;
+            if expFree>0.015;
+                LoadNextFrame();
+                %  fprintf('Doing work\n');
+            end
             end
             [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] = Screen('Flip', g.window,nextStamps(it));
-            Screen('Close',g.texes(k));
+              Screen('Close',g.texes(k));
             g.FramesInVM=g.FramesInVM-1;
             t2=GetSecs();
             
@@ -801,19 +703,9 @@ if ~g.sim
     fprintf('Missed this time: %d, %d total. Loaded %d\n',thisMissed,g.missed,g.nextFrI-thisNInQ);
     Screen('FillRect',g.window,g.grey, rect);
     Screen(g.window, 'Flip');
-    
-    
-    
-    for i=1:size(timestamps,2)-1
-        diffs(i)=timestamps(i+1)-timestamps(i);
-    end
-    %     'Framerate'
-    %     1/mean(diffs)
-    %     std(diffs)
+
     Priority(0);
 end
-
-fprintf('Played %d %d\n',length,it-1);
 
 end
 
@@ -825,28 +717,19 @@ end
 
 function []=flip()
 global g;
-if ~g.respSim
+if ~g.sim
     Screen('Flip',g.window);
 end
 end
 
 function[]=fKbWait()
 global g;
-if ~g.respSim, KbWait; end
+if ~g.sim, KbWait; end
 end
 
 function [] = InitialiseFramework()
 %Sets up PsychToolbox and other parts of the experimental framework
 global g;
-
-dbstop if error
-
-%Init
-g.nextFrI=1;
-g.FramesInVM=0;
-
-g.nQ=0;
-g.trial=1;
 
 g.training=1;
 if g.sim, g.pause=0; g.smallPause=0; end
@@ -855,18 +738,14 @@ if ~g.debugMode
 else
     g.subjectName='test';
 end
-checkDir('output\');
 g.logFileName=[g.subjectName '_log.txt'];
 g.logFileID=fopen(['output\' g.logFileName],'w');
 assert(g.logFileID ~= -1); %Check file is really open
-g.vlogFileName=[ 'vlog.txt'];
-g.vlogFileID=fopen(['output\' g.vlogFileName],'w');
 fireLog(['Starting experiment on subject ' g.subjectName]);
 g.responseFileName=[g.subjectName '_results.txt'];
-g.responseMatFileName=['output\' g.subjectName '_results.mat'];
+g.responseMatFileName=[ g.subjectName '_results.mat'];
 g.responseFileID=fopen([ 'output\' g.responseFileName],'w');
-g.FrameNumsQ=zeros(1,2000);
-g.fQ=zeros(1,2000);
+g.FrameNumsQ=zeros(1,1400);
 g.nextFrI=1;
 g.FramesInVM=0;
 
@@ -885,7 +764,7 @@ if g.komodo
 end
 if ~g.debugMode;  HideCursor(); end
 
-if ~g.sim
+if ~g.sim    
     AssertOpenGL;
     screenid = max(Screen('Screens'));
     PsychImaging('PrepareConfiguration');
@@ -899,7 +778,7 @@ if ~g.sim
     if g.debugMode
         %  [g.window,windowRect]=Screen(screenNumber,'OpenWindow',0,[20 20 800 800],[],2);
         % [g.window,g.windowRect]=Screen(screenNumber,'OpenWindow',[127.5 127.5 127.5],[20 20 800 800],[],2);
-        [g.window,g.windowRect]=PsychImaging('OpenWindow',screenNumber,128,[20 20 800 800]);
+        [g.window,g.windowRect]=PsychImaging('OpenWindow',screenNumber,128,[20 20 800 800]);   
     else
         % [g.window,g.windowRect]=Screen(screenNumber,'OpenWindow',[127.5 127.5 127.5],[],[],2);
         [g.window,g.windowRect]=PsychImaging('OpenWindow',screenNumber,128);
@@ -954,15 +833,6 @@ function fireLog(s)
 global g;
 logString=[datestr(now) ': ' s];
 fprintf(g.logFileID,[logString '\n']);
-fprintf([logString '\n']);
-
-end
-
-function vLog(s)
-%Log a string to the logfile for this experiment
-global g;
-logString=[datestr(now) ': ' s];
-fprintf(g.vlogFileID,[logString '\n']);
 fprintf([logString '\n']);
 
 end
@@ -1099,7 +969,7 @@ else
         %             a = strcmp(response_key, 'RightArrow');
         %             b = strcmp(response_key, 'LeftArrow');
         %If several keys are down, select only one
-        if strcmp(class(response_key),'cell'), response_key=response_key{1}; 
+        if strcmp(class(response_key),'cell'), response_key=response_key{1}; en
             if 1
                 if strcmp(response_key,'q')
                     exitExperiment();
@@ -1119,7 +989,49 @@ else
 end
 end
 
-function [r]=getLR()
+
+function [r,t]=getConfidence()
+%Gets key response - 0,1,2,3 from definitely no to definitely yes
+global g;
+if g.sim
+    if rand < 0.3
+        r=1;
+    else
+        r=3;
+    end  
+else    
+go=1;
+ListenChar(2);
+    while go
+        %WaitSecs(0.2);
+        KbWait;
+        [ keyIsDown, t, keyCode] = KbCheck;
+        %keyCode is a 256-element list saying which keys are down, thus we must
+        %not truncate it       
+        response_key = KbName(keyCode);
+        %             a = strcmp(response_key, 'RightArrow');
+        %             b = strcmp(response_key, 'LeftArrow');
+        %If several keys are down, select only one
+        if strcmp(class(response_key),'cell'), response_key=response_key{1}; end
+        
+        if strcmp(response_key, 'a')
+            r=0; go=0;
+        elseif strcmp(response_key, 's')
+            r=1;go=0;
+        elseif strcmp(response_key, 'k')
+            r=2;go=0;
+        elseif strcmp(response_key, 'l')
+            r=3;go=0;
+        end
+        
+     
+
+    end
+        ListenChar(0);
+end
+end
+
+function [r]=getYN()
 %Gets key response - 0 for left or 1 for right.
 global g;
 if g.sim
@@ -1151,13 +1063,13 @@ else
                 exitExperiment();
             end
         end
-        a = strcmp(response_key, 'left') | strcmp(response_key,'LeftArrow') ; %Mac
+        a = strcmp(response_key, 'up') | strcmp(response_key,'UpArrow') ; %Mac
         if a(1)==1; a=1; else a=0; end
         %Covers the case where a is a vector
         
         
         %Makes sure a is always 1 or 0 and not anything else
-        b = strcmp(response_key, 'right') | strcmp(response_key,'RightArrow');
+        b = strcmp(response_key, 'down') | strcmp(response_key,'DownArrow');
         if b(1)==1; b=1; else b=0; end
         
         %
@@ -1170,67 +1082,9 @@ else
     
     
     if b
-        r=1;
-    else
         r=0;
-    end
-end
-end
-
-function [r]=getYN()
-%Gets key response - 0 for down or 1 for up.
-global g;
-if g.sim
-    if rand < 0.3
-        r=1;
     else
-        r=0;
-    end
-    
-else
-    
-    a = 0;
-    b=0;
-    while a == 0 && b ==0
-        %WaitSecs(0.2);
-        KbWait;
-        [ keyIsDown, kt, keyCode ] = KbCheck;
-        %keyCode is a 256-element list saying which keys are down, thus we must
-        %not truncate it
-        
-        response_key = KbName(keyCode);
-        %             a = strcmp(response_key, 'RightArrow');
-        %             b = strcmp(response_key, 'LeftArrow');
-        %If several keys are down, select only one
-        if strcmp(class(response_key),'cell'), response_key=response_key{1}; end
-        
-        if 1
-            if strcmp(response_key,'q')
-                exitExperiment();
-            end
-        end
-        a = strcmp(response_key, 'down') | strcmp(response_key,'DownArrow') ; %Mac
-        if a(1)==1; a=1; else a=0; end
-        %Covers the case where a is a vector
-        
-        
-        %Makes sure a is always 1 or 0 and not anything else
-        b = strcmp(response_key, 'up') | strcmp(response_key,'UpArrow');
-        if b(1)==1; b=1; else b=0; end
-        
-        %
-        if g.debugMode
-            if strcmp(response_key, 'k')
-                keyboard
-            end
-        end
-    end
-    
-    
-    if b
         r=1;
-    else
-        r=0;
     end
 end
 end
@@ -1249,31 +1103,21 @@ function [ allTrialParams blockParamCells info params ] = fireReadParams(  )
 %Here we vary target length across blocks, sample length within.
 %INBLOCK or ACROSSBLOCK
 
-% params(1).name='inv';
-% params(1).type='enum';
-% params(1).list=[1 2];
-% params(1).scheme='acrossblock';
 
 
-% params(2).name='Lsample';
-% params(2).type='enum';
-% params(2).list=[10 25 50];
-% params(2).scheme='inblock';
-%
-% params(3).name='ratio';
-% params(3).type='enum';
-% params(3).list=[1.2 1.4 1.6 1.8 2];
-% params(3).scheme='inblock';
 
-params(1).name='sampleOrder';
+params(1).name='Lpre';
 params(1).type='enum';
-params(1).list=[1 2];
+params(1).list=[0 25 50 100];
 params(1).scheme='inblock';
 
-
+params(2).name='Lpost';
+params(2).type='enum';
+params(2).list=[0 25 50 100];
+params(2).scheme='inblock';
 
 blockReps=10; %Number of repetitions of each style of block
-conditionReps=60; %Number of repetitions of each condition. Must be divisible by blockReps
+conditionReps=50; %Number of repetitions of each condition. Must be divisible by blockReps
 conditionRepsPerBlock=conditionReps/blockReps;
 
 if mod(conditionReps,blockReps)
@@ -1434,15 +1278,6 @@ z=repmat(x,1,size(y,2));
 for i=1:size(z,2)
     z(rowsx+1,i)=y(ceil(i/sx)); %Cunning
 end
-end
-
-function [  ] = checkDir( d )
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
-if ~isdir(d)
-    mkdir(d);
-end
-
 end
 
 
