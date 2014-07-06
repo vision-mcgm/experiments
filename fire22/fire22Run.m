@@ -34,7 +34,7 @@ g.missed=0;
 g.areaLength=0.5*50; %secs: areas we take both samples from
 g.sampleLength=0.4*50;
 g.exName='fire17';
-m=machineParams;
+%m=machineParams;
 g.maxFramesInVM=500;
 g.intercache=0;
 
@@ -87,7 +87,7 @@ g.FramesInVM=0;
 g.nQ=1;
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
-g.allTrialParamsArray(1400)=fireScheduleTrial(allTrialParams(1,:));
+g.allTrialParamsArray(1400)=fireFakeScheduleTrial();
 
 for i=1:g.info.nTrials
     i
@@ -178,6 +178,25 @@ trialParams.Lsample=Lsample;
 trialParams.Ltest=Ltest;
 %Common
 trialParams;
+end
+
+
+function trialParams=fireFakeScheduleTrial() 
+%Makes a fake trial params structure so that we can preallocate the array
+global g;
+
+trialParams.startAQ=0;
+trialParams.startBQ=0;
+trialParams.Lpre=0;
+trialParams.Lpost=0;
+trialParams.YN=0;
+trialParams.Stest=0;
+trialParams.Sfalse=0;
+trialParams.Ssample=0;
+trialParams.source=0;
+trialParams.Lsample=0;
+trialParams.Ltest=0;
+
 end
 
 function [tp]=fireTrial(tp)
