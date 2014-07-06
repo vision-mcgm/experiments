@@ -221,9 +221,11 @@ global g;
 trialParams.startSampleQ=0;
 trialParams.startTestAQ=0;
 trialParams.startTestBQ=0;
-trialParams.startTestBQ=0;
-trialParams.startTestBQ=0;
 trialParams.ratio=0;
+<<<<<<< HEAD
+=======
+
+>>>>>>> 021f0317605bf69feda0444e741bb1422acc598a
 trialParams.trueTest=0;
 trialParams.Strue=0;
 trialParams.Sfalse=0;

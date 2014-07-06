@@ -1,5 +1,4 @@
-
-function [  ] = fire22Run()
+function [ ] = fire22Run()
 %Backwards detection over sampling rates
 %Parameters
 clear all;
@@ -16,7 +15,7 @@ g.videoFolder='../../cropped_20-24mins/'
 g.monitor=1; %1 for monitor with start bar
 g.offset=200;
 g.frames=10000; %Number of frames to load in total
-g.cropRect=[291   38  640  563]; %The rectangle of interest loaded from the images - x y length height
+g.cropRect=[291 38 640 563]; %The rectangle of interest loaded from the images - x y length height
 g.textColour=[0 0 0];
 g.clusterOutputFolder='W:\Fintan\Experiments\autoOutput\';
 g.sampleAreaPause=1;
@@ -127,7 +126,7 @@ end
 end
 
 
-function trialParams=fireScheduleTrial(paramCell) 
+function trialParams=fireScheduleTrial(paramCell)
 %Matlab treats a passed cell array as multiple functions
 %Loads frames into the video queue for a particular trial
 %Remember we assume each frame will only be used once
@@ -182,12 +181,13 @@ trialParams;
 end
 
 
-function trialParams=fireFakeScheduleTrial() 
+function trialParams=fireFakeScheduleTrial()
 %Makes a fake trial params structure so that we can preallocate the array
 global g;
-
+if ~g.sim
 trialParams.startAQ=0;
 trialParams.startBQ=0;
+end
 trialParams.Lpre=0;
 trialParams.Lpost=0;
 trialParams.YN=0;
@@ -229,8 +229,10 @@ end
 %Get response
 if g.sim
     response=makeResponse(direction,sampleRate);
+    tPress=GetSecs;
 elseif g.respSim
     response=randi(2)-1;
+    tPress=GetSecs;
 else
     [response,tPress]=getConfidence();
 end
@@ -250,7 +252,9 @@ else
     tp.certain=0;
 end
 
+if ~g.sim
 tp.rt=tPress-t0;
+end
 
 if g.sim
     
@@ -294,7 +298,7 @@ list=dir([g.videoFolder 'normal/*.bmp']);
 %alteredFolder=[g.videoFolder '\altered\'];
 %alteredList=dir([alteredFolder '*.bmp']);
 img=imread([g.videoFolder 'normal/' list(1).name]);
-%img=imresize(img,g.scaling);
+img=imresize(img,g.scaling);
 vidHeight = size(img,1);
 vidWidth = size(img,2);
 g.h=vidHeight;
@@ -308,8 +312,8 @@ if 0
         img=imread([g.videoFolder list(k).name]);
         img=img(g.cropRect(2):g.cropRect(2)+g.cropRect(4),...
             g.cropRect(1):g.cropRect(1)+g.cropRect(3),:);
-        %  altImg=imread([alteredFolder list(k).name]);
-        %  altImg=altImg(g.cropRect(2):g.cropRect(2)+g.cropRect(4),...
+        % altImg=imread([alteredFolder list(k).name]);
+        % altImg=altImg(g.cropRect(2):g.cropRect(2)+g.cropRect(4),...
         % g.cropRect(1):g.cropRect(1)+g.cropRect(3),:);
         
         % mov(k).cdata = read(xyloObj ,mod(k,nFrames)+1);
@@ -329,7 +333,7 @@ function []=firePractice(n)
 global g;
 
 for i=1:n
-    %  [num2str(g.targetLength) ' ' num2str(g.sampleLength) ]
+    % [num2str(g.targetLength) ' ' num2str(g.sampleLength) ]
     correct=fireTrial(randi(2),randi(2),30);
     corrects(i)=correct;
     %respLog([num2str(correct) ' ' num2str(g.targetLength) ' ' num2str(g.sampleLength)]);
@@ -371,7 +375,7 @@ else
     startB=startA+sampleLength+Boffset;
 end
 
-if startA > areaLength  || startB > areaLength
+if startA > areaLength || startB > areaLength
     ShowCursor
     keyboard
 end
@@ -416,25 +420,25 @@ if ~g.sim
             else
                 EnqueueFrame(fList(k));
             end
-            %         k;
-            %         if negative
-            %             imPath=[g.videoFolder 'negative\frame' num2str(fList(k),g.decSpec) '.bmp'];
-            %         end
-            %         if chromatic
-            %             imPath=[g.videoFolder 'hue\frame' num2str(fList(k),g.decSpec) '.bmp'];
-            %             im=imread(imPath);
-            %             im=uint8(im);
-            %             im=im*255;
-            %         else
-            %             imPath=[g.videoFolder 'normal/frame' num2str(fList(k),g.decSpec) '.bmp'];
-            %             im=imread(imPath);
-            %         end
-            %         if g.resize
-            %             im=imresize(im,g.scaling);
-            %         end
-            %         tex=Screen('MakeTexture',g.window,im);
-            %         g.texes(fList_handles(k))=tex;
-            %         g.prevTextures=[g.prevTextures tex];
+            % k;
+            % if negative
+            % imPath=[g.videoFolder 'negative\frame' num2str(fList(k),g.decSpec) '.bmp'];
+            % end
+            % if chromatic
+            % imPath=[g.videoFolder 'hue\frame' num2str(fList(k),g.decSpec) '.bmp'];
+            % im=imread(imPath);
+            % im=uint8(im);
+            % im=im*255;
+            % else
+            % imPath=[g.videoFolder 'normal/frame' num2str(fList(k),g.decSpec) '.bmp'];
+            % im=imread(imPath);
+            % end
+            % if g.resize
+            % im=imresize(im,g.scaling);
+            % end
+            % tex=Screen('MakeTexture',g.window,im);
+            % g.texes(fList_handles(k))=tex;
+            % g.prevTextures=[g.prevTextures tex];
         end
     end
     time=GetSecs-Tstart;
@@ -520,7 +524,7 @@ global g;
 
 %Check whether video memory is full or not before here!
 if ~g.sim
-if g.nextFrI <= size(g.FrameNumsQ,2) &&  g.FramesInVM < g.maxFramesInVM%It's a vector, so must reduce to one first!
+if g.nextFrI <= size(g.FrameNumsQ,2) && g.FramesInVM < g.maxFramesInVM%It's a vector, so must reduce to one first!
     LoadFrame(g.FrameNumsQ(g.nextFrI),0,0);
     g.FramesInVM=g.FramesInVM+1;
     g.nextFrI=g.nextFrI+1;
@@ -554,7 +558,7 @@ t=GetSecs()-t;
 fprintf('Frame q %d loaded in %d to tex %d, %d in VM\n',n,t,tex,g.FramesInVM);
 end
 
-function [  ] = cacheClip( start,length,negative,backwards,interval,regime,location,chromatic )
+function [ ] = cacheClip( start,length,negative,backwards,interval,regime,location,chromatic )
 global g;
 %Plays a constant clip starting at start with a certain length
 %Regime controls INVERSION. 1=up 2=inverted
@@ -586,25 +590,25 @@ nTexes=size(fList,2);
 if ~g.sim
     for k=1:nTexes
         LoadFrame(fList(k),fList_handles(k),negative,chromatic);
-        %         k;
-        %         if negative
-        %             imPath=[g.videoFolder 'negative\frame' num2str(fList(k),g.decSpec) '.bmp'];
-        %         end
-        %         if chromatic
-        %             imPath=[g.videoFolder 'hue\frame' num2str(fList(k),g.decSpec) '.bmp'];
-        %             im=imread(imPath);
-        %             im=uint8(im);
-        %             im=im*255;
-        %         else
-        %             imPath=[g.videoFolder 'normal/frame' num2str(fList(k),g.decSpec) '.bmp'];
-        %             im=imread(imPath);
-        %         end
-        %         if g.resize
-        %             im=imresize(im,g.scaling);
-        %         end
-        %         tex=Screen('MakeTexture',g.window,im);
-        %         g.texes(fList_handles(k))=tex;
-        %         g.prevTextures=[g.prevTextures tex];
+        % k;
+        % if negative
+        % imPath=[g.videoFolder 'negative\frame' num2str(fList(k),g.decSpec) '.bmp'];
+        % end
+        % if chromatic
+        % imPath=[g.videoFolder 'hue\frame' num2str(fList(k),g.decSpec) '.bmp'];
+        % im=imread(imPath);
+        % im=uint8(im);
+        % im=im*255;
+        % else
+        % imPath=[g.videoFolder 'normal/frame' num2str(fList(k),g.decSpec) '.bmp'];
+        % im=imread(imPath);
+        % end
+        % if g.resize
+        % im=imresize(im,g.scaling);
+        % end
+        % tex=Screen('MakeTexture',g.window,im);
+        % g.texes(fList_handles(k))=tex;
+        % g.prevTextures=[g.prevTextures tex];
     end
 end
 time=GetSecs-Tstart;
@@ -613,7 +617,7 @@ fprintf('%d textures loaded in %d, %d per tex\n',length,time,period);
 end
 
 
-function [  ] = playClip(start,length,negative,backwards,interval,angleCode,location,chromatic )
+function [ ] = playClip(start,length,negative,backwards,interval,angleCode,location,chromatic )
 global g;
 %The start here is a number in the Q!
 fprintf('Playing clip at q %d length %d\n',start,length);
@@ -694,12 +698,12 @@ if ~g.sim
             
             % [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] =
             % Screen('Flip', g.window,nextStamp); %Original
-           if  g.intercache
+           if g.intercache
                t1=GetSecs();
             expFree=nextStamps(it)-t1;
             if expFree>0.015;
                 LoadNextFrame();
-                %  fprintf('Doing work\n');
+                % fprintf('Doing work\n');
             end
             end
             [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] = Screen('Flip', g.window,nextStamps(it));
@@ -782,9 +786,9 @@ if g.komodo
         end
     end
 end
-if ~g.debugMode;  HideCursor(); end
+if ~g.debugMode; HideCursor(); end
 
-if ~g.sim    
+if ~g.sim
     AssertOpenGL;
     screenid = max(Screen('Screens'));
     PsychImaging('PrepareConfiguration');
@@ -796,9 +800,9 @@ if ~g.sim
     screenNumber=max(screens);
     screenNumber=min(screenNumber,g.monitor);
     if g.debugMode
-        %  [g.window,windowRect]=Screen(screenNumber,'OpenWindow',0,[20 20 800 800],[],2);
+        % [g.window,windowRect]=Screen(screenNumber,'OpenWindow',0,[20 20 800 800],[],2);
         % [g.window,g.windowRect]=Screen(screenNumber,'OpenWindow',[127.5 127.5 127.5],[20 20 800 800],[],2);
-        [g.window,g.windowRect]=PsychImaging('OpenWindow',screenNumber,128,[20 20 800 800]);   
+        [g.window,g.windowRect]=PsychImaging('OpenWindow',screenNumber,128,[20 20 800 800]);
     else
         % [g.window,g.windowRect]=Screen(screenNumber,'OpenWindow',[127.5 127.5 127.5],[],[],2);
         [g.window,g.windowRect]=PsychImaging('OpenWindow',screenNumber,128);
@@ -808,7 +812,7 @@ if ~g.sim
     g.centreX=(g.windowRect(3)+g.windowRect(1))/2;
     g.centreY=(g.windowRect(4)+g.windowRect(2))/2;
     g.black=BlackIndex(g.window);
-    white = WhiteIndex(g.window);  % Retrieves the CLUT color code for white.
+    white = WhiteIndex(g.window); % Retrieves the CLUT color code for white.
     g.grey = (g.black + white) / 2;
     Screen('FillRect',g.window,g.grey);
 end
@@ -948,8 +952,8 @@ end
 function []=checkQuit()
 [ keyIsDown, kt, keyCode ] = KbCheck;
 response_key = KbName(keyCode);
-%             a = strcmp(response_key, 'RightArrow');
-%             b = strcmp(response_key, 'LeftArrow');
+% a = strcmp(response_key, 'RightArrow');
+% b = strcmp(response_key, 'LeftArrow');
 if strcmp(response_key, 'q')
     sca
 end
@@ -986,8 +990,8 @@ else
         %keyCode is a 256-element list saying which keys are down, thus we must
         %not truncate it
         response_key = KbName(keyCode);
-        %             a = strcmp(response_key, 'RightArrow');
-        %             b = strcmp(response_key, 'LeftArrow');
+        % a = strcmp(response_key, 'RightArrow');
+        % b = strcmp(response_key, 'LeftArrow');
         %If several keys are down, select only one
         if strcmp(class(response_key),'cell'), response_key=response_key{1}; en
             if 1
@@ -1018,8 +1022,8 @@ if g.sim
         r=1;
     else
         r=3;
-    end  
-else    
+    end
+else
 go=1;
 ListenChar(2);
     while go
@@ -1027,10 +1031,10 @@ ListenChar(2);
         KbWait;
         [ keyIsDown, t, keyCode] = KbCheck;
         %keyCode is a 256-element list saying which keys are down, thus we must
-        %not truncate it       
+        %not truncate it
         response_key = KbName(keyCode);
-        %             a = strcmp(response_key, 'RightArrow');
-        %             b = strcmp(response_key, 'LeftArrow');
+        % a = strcmp(response_key, 'RightArrow');
+        % b = strcmp(response_key, 'LeftArrow');
         %If several keys are down, select only one
         if strcmp(class(response_key),'cell'), response_key=response_key{1}; end
         
@@ -1073,8 +1077,8 @@ else
         %not truncate it
         
         response_key = KbName(keyCode);
-        %             a = strcmp(response_key, 'RightArrow');
-        %             b = strcmp(response_key, 'LeftArrow');
+        % a = strcmp(response_key, 'RightArrow');
+        % b = strcmp(response_key, 'LeftArrow');
         %If several keys are down, select only one
         if strcmp(class(response_key),'cell'), response_key=response_key{1}; end
         
@@ -1109,7 +1113,7 @@ else
 end
 end
 
-function [ allTrialParams blockParamCells info params ] = fireReadParams(  )
+function [ allTrialParams blockParamCells info params ] = fireReadParams( )
 %Generates block params for experiment, and runs
 %ASSUMPTIONS: we have even block structure (same amount of trials per
 %block)
@@ -1299,5 +1303,3 @@ for i=1:size(z,2)
     z(rowsx+1,i)=y(ceil(i/sx)); %Cunning
 end
 end
-
-
