@@ -229,6 +229,7 @@ end
 %Get response
 if g.sim
     response=makeResponse(direction,sampleRate);
+    tPress=GetSecs;
 elseif g.respSim
     response=randi(2)-1;
     tPress=GetSecs;
