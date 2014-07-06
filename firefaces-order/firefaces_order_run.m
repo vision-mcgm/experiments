@@ -197,10 +197,11 @@ switch trueTestFire
         StrueFire=StestBFire;
         YNFire=0;
 end
+angleF=180;
 
 if ~g.sim & real
-    trialParams.startSampleQFace=EnqueueFrames(f,SsampleFace,LsampleFace,neg,direction,sampleRate,angle,location,chrom);
-    trialParams.startTestAQFace=EnqueueFrames(f,StestAFace,LtestFace,neg,direction,sampleRate,angle,location,chrom);
+    trialParams.startSampleQFace=EnqueueFrames(f,SsampleFace,LsampleFace,neg,direction,sampleRate,angleF,location,chrom);
+    trialParams.startTestAQFace=EnqueueFrames(f,StestAFace,LtestFace,neg,direction,sampleRate,angleF,location,chrom);
     fFire=99;
     trialParams.startSampleQFire=EnqueueFrames(fFire,SsampleFire,LsampleFire,neg,direction,sampleRate,angle,location,chrom);
     trialParams.startTestAQFire=EnqueueFrames(fFire,StestAFire,LtestFire,neg,direction,sampleRate,angle,location,chrom);
@@ -263,21 +264,25 @@ if tp.order==1
     LA=tp.LsampleFace;
     startB=tp.startSampleQFire;
     LB=tp.LsampleFire;
+    angleA=180;
+    angleB=0;
 elseif tp.order==2
     startA=tp.startSampleQFire;
     LA=tp.LsampleFire;
     startB=tp.startSampleQFace;
     LB=tp.LsampleFace;
+    angleA=0;
+    angleB=180;
 end
 
 if ~g.sim
     pause(1);
-    playClip(startA,LA,neg,direction,sampleRate,angle,location,chrom);
+    playClip(startA,LA,neg,direction,sampleRate,angleA,location,chrom);
     fireClear;
     firePause(1);
     fixationSpot([0 255 0]);
     firePause(1);
-    playClip(startB,LB,neg,direction,sampleRate,angle,location,chrom);
+    playClip(startB,LB,neg,direction,sampleRate,angleB,location,chrom);
     fireClear;
     firePause(1);
     fixationSpot([0 255 0]);
@@ -728,6 +733,7 @@ elseif angleCode==3
 elseif angleCode==4
     angle=180;
 end
+angle=0;
 
 if location==1
     rect=[g.centreX-(g.w/2)-g.offset g.centreY-(g.h/2) g.centreX+(g.w/2)-g.offset g.centreY+(g.h/2)];
