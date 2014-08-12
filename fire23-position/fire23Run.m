@@ -1041,7 +1041,7 @@ end
 
 function waitForX()
 global g;
-if g.sim
+if g.sim | g.respSim
 else
     a = 0;
     while a == 0
@@ -1054,22 +1054,23 @@ else
         %             a = strcmp(response_key, 'RightArrow');
         %             b = strcmp(response_key, 'LeftArrow');
         %If several keys are down, select only one
-        if strcmp(class(response_key),'cell'), response_key=response_key{1}; 
-            if 1
-                if strcmp(response_key,'q')
-                    exitExperiment();
-                end
-            end
-            a = strcmp(response_key, 'x') | strcmp(response_key,'X') ; %Mac
-            if a(1)==1; a=1; else a=0; end
-            %Covers the case where a is a vecto
-            %
-            if g.debugMode
-                if strcmp(response_key, 'k')
-                    keyboard
-                end
+        if strcmp(class(response_key),'cell'), response_key=response_key{1};
+        end
+        if 1
+            if strcmp(response_key,'q')
+                exitExperiment();
             end
         end
+        a = strcmp(response_key, 'x') | strcmp(response_key,'X') ; %Mac
+        if a(1)==1; a=1; else a=0; end
+        %Covers the case where a is a vecto
+        %
+        if g.debugMode
+            if strcmp(response_key, 'k')
+                keyboard
+            end
+        end
+        
     end
 end
 end
