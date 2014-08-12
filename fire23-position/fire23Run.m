@@ -5,7 +5,7 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -13,7 +13,7 @@ g.pause=1;
 g.smallPause=0.5;
 g.fireFolder='..\..\cropped_20-24mins\normal\';
 g.videoFolder='../../cropped_20-24mins/'
-g.monitor=1; %1 for monitor with start bar
+g.monitor=2; %1 for monitor with start bar
 g.offset=200;
 g.frames=10000; %Number of frames to load in total
 g.cropRect=[291 38 640 563]; %The rectangle of interest loaded from the images - x y length height

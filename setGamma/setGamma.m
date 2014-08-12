@@ -37,7 +37,7 @@ g.textColour=[0 0 0];
 
 
 screens=Screen('Screens');
-sn=1;
+sn=2;
 [w1,windowRect]=Screen(sn,'OpenWindow',[127.5 127.5 127.5],[20 20 500 500],[],2);
 [w2,windowRect]=Screen(sn,'OpenWindow',[127.5 127.5 127.5],[500 20 1000 500],[],2);
 
