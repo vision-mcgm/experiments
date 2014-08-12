@@ -1,4 +1,4 @@
-function [ ] = fire22Run()
+function [ ] = fire23Run()
 %Backwards detection over sampling rates
 %Parameters
 clear all;
@@ -95,14 +95,14 @@ for i=1:nTraining
     trainingParamsArray=fireScheduleTrial(trainingParamsCell,50,100);
     CacheN(151);
     tps=fireTrial(trainingParamsArray);
-    resps(i)=tps.correct;
-    fireTextWait(['Accuracy: ' num2str(mean(resps(max(1,end-nWindow):end)))]);
+    a2=mean(resps(max(1,end-nWindow):end));
+    fireTextWait(['Accuracy: ' num2str(a2)]);
 end
 
 %VITAL: finish training
 g.feedback=0;
 g.training=0;
-fireTextConfirm(['Accuracy: ' num2str(a) '\nTraining over. WAIT FOR THE EXPERIMENTER.']);
+fireTextConfirm(['Accuracy: ' num2str(a) ', ' num2str(a2) '\nTraining over. WAIT FOR THE EXPERIMENTER.']);
 waitForX;
 end
 
@@ -149,6 +149,7 @@ thisTrialParams.block=b;
     fireTextConfirm(['You have finished block ' num2str(b) ' of ' num2str(g.info.nBlocks) '.\nPlease have a short break, then hit any key to continue.']);
 end
 
+fireTextConfirm(['Experiment over. Thanks! \nPlease alert the experimenter.']);
 
 end
 
