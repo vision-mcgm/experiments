@@ -74,7 +74,7 @@ global g;
  nWindow=10;
 %Training with constant length
 fireTextConfirm('Ready to start training part A.\nHit any key to start.');
-nTraining=5;
+nTraining=20;
 
 trainingParamsCell{1}=0; %offset
 for i=1:nTraining
@@ -90,7 +90,7 @@ end
 clear resps
 fireTextConfirm(['Accuracy: ' num2str(a) '\nReady to start training part B.\nHit any key to start.']);
 trainingParamsCell{1}=50; %offset
-nTraining=5;
+nTraining=20;
 for i=1:nTraining
     trainingParamsArray=fireScheduleTrial(trainingParamsCell,50,100);
     CacheN(151);
@@ -178,7 +178,7 @@ offset=paramCell{1};
 [Stest Sfalse]=pickSeparateSamples(g.frames, Ltest);
 source=randi(2);
 %Pick start point within sample
-sampleOffset=offset
+sampleOffset=offset;
 YN=randi(2);
 
 switch YN
@@ -229,7 +229,7 @@ end
 
 
 function [tp]=fireTrial(tp)
-%Can call with extra argins for training
+
 %As long as we give the correct struct OUT, it doesn't matter what we get
 %in.
 %So here we need to be able to specify length (tp.length), and position.
@@ -280,9 +280,6 @@ if tp.YN==1 %yes
 elseif tp.YN==2 %no
     if response==0,tp.correct=1;else tp.correct=0;end
 end
-
-
-
 
 if g.sim
         if rand() <0.6
@@ -967,11 +964,13 @@ end
 
 function fireTextConfirm(s)
 global g;
+if ~g.respSim
 if ~g.sim
     DrawFormattedText(g.window,s,'center','center',g.textColour)
     Screen('Flip',g.window);
     fKbWait;
     pause(1);
+end
 end
 end
 
@@ -1042,7 +1041,7 @@ end
 
 function waitForX()
 global g;
-if g.sim
+if g.sim | g.respSim
 else
     a = 0;
     while a == 0
@@ -1055,22 +1054,23 @@ else
         %             a = strcmp(response_key, 'RightArrow');
         %             b = strcmp(response_key, 'LeftArrow');
         %If several keys are down, select only one
-        if strcmp(class(response_key),'cell'), response_key=response_key{1}; 
-            if 1
-                if strcmp(response_key,'q')
-                    exitExperiment();
-                end
-            end
-            a = strcmp(response_key, 'x') | strcmp(response_key,'X') ; %Mac
-            if a(1)==1; a=1; else a=0; end
-            %Covers the case where a is a vecto
-            %
-            if g.debugMode
-                if strcmp(response_key, 'k')
-                    keyboard
-                end
+        if strcmp(class(response_key),'cell'), response_key=response_key{1};
+        end
+        if 1
+            if strcmp(response_key,'q')
+                exitExperiment();
             end
         end
+        a = strcmp(response_key, 'x') | strcmp(response_key,'X') ; %Mac
+        if a(1)==1; a=1; else a=0; end
+        %Covers the case where a is a vecto
+        %
+        if g.debugMode
+            if strcmp(response_key, 'k')
+                keyboard
+            end
+        end
+        
     end
 end
 end
