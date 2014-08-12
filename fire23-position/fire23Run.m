@@ -95,6 +95,7 @@ for i=1:nTraining
     trainingParamsArray=fireScheduleTrial(trainingParamsCell,50,100);
     CacheN(151);
     tps=fireTrial(trainingParamsArray);
+    resps(i)=tps.correct;
     a2=mean(resps(max(1,end-nWindow):end));
     fireTextWait(['Accuracy: ' num2str(a2)]);
 end
