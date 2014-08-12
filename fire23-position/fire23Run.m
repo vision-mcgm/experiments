@@ -39,22 +39,18 @@ g.exName='fire17';
 g.maxFramesInVM=500;
 g.intercache=0;
 
-
-
-g.params(1).name='Lpre';
+%Parameters
+g.params(1).name='offset';
 g.params(1).type='enum';
-g.params(1).list=[0 25 50 100];
+g.params(1).list=[0 10 20 30 40 50 60 70 80 90 100];
 g.params(1).scheme='inblock';
 
-g.params(2).name='Lpost';
-g.params(2).type='enum';
-g.params(2).list=[0 25 50 100];
-g.params(2).scheme='inblock';
-
+g.blockReps=10; %Number of repetitions of each style of block
+g.conditionReps=50; %Number of repetitions of each condition. Must be divisible by blockReps
 
 InitialiseFramework();
 InitialiseExperiment();
-ShowCursor;
+%ShowCursor;
 
 
 g.nextFrI=1;
@@ -62,7 +58,7 @@ g.FramesInVM=0;
 
 g.nQ=1;
 
-%RunTraining();
+RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
 RunExperiment();
@@ -75,14 +71,29 @@ end
 
 function RunTraining()
 global g;
-fireTextConfirm('Ready to start training.\nHit any key to start.');
-nTraining=40;
-nWindow=10;
-trainingParamsCell{1}=0;
-trainingParamsCell{2}=0;
+ nWindow=10;
+%Training with constant length
+fireTextConfirm('Ready to start training part A.\nHit any key to start.');
+nTraining=5;
+
+trainingParamsCell{1}=0; %offset
 for i=1:nTraining
-    trainingParamsArray=fireScheduleTrial(trainingParamsCell);
+    trainingParamsArray=fireScheduleTrial(trainingParamsCell,50,50);
     CacheN(101);
+    tps=fireTrial(trainingParamsArray);
+    resps(i)=tps.correct;
+    a=mean(resps(max(1,end-nWindow):end));
+    fireTextWait(['Accuracy: ' num2str(a)]);
+end
+
+%Training with variable length
+clear resps
+fireTextConfirm(['Accuracy: ' num2str(a) '\nReady to start training part B.\nHit any key to start.']);
+trainingParamsCell{1}=50; %offset
+nTraining=5;
+for i=1:nTraining
+    trainingParamsArray=fireScheduleTrial(trainingParamsCell,50,100);
+    CacheN(151);
     tps=fireTrial(trainingParamsArray);
     resps(i)=tps.correct;
     fireTextWait(['Accuracy: ' num2str(mean(resps(max(1,end-nWindow):end)))]);
@@ -91,7 +102,7 @@ end
 %VITAL: finish training
 g.feedback=0;
 g.training=0;
-fireTextConfirm('Training over. WAIT FOR THE EXPERIMENTER.');
+fireTextConfirm(['Accuracy: ' num2str(a) '\nTraining over. WAIT FOR THE EXPERIMENTER.']);
 waitForX;
 end
 
@@ -102,11 +113,11 @@ global g;
 
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
-g.allTrialParamsArray(1400)=fireFakeScheduleTrial();
+ cg.allTrialParamsArray(1400)=fireFakeScheduleTrial();
 
 for i=1:g.info.nTrials
     i
-    g.allTrialParamsArray(i)=fireScheduleTrial(allTrialParams(i,:));
+    g.allTrialParamsArray(i)=fireScheduleTrial(allTrialParams(i,:),50,100);
     if i==1
          g.allTrialParamsArray(g.info.nTrials)= g.allTrialParamsArray(1);
     end
@@ -142,7 +153,8 @@ end
 end
 
 
-function trialParams=fireScheduleTrial(paramCell)
+function trialParams=fireScheduleTrial(paramCell,Lsample,Ltest)
+%Varargin: Lsample, Ltest
 %Matlab treats a passed cell array as multiple functions
 %Loads frames into the video queue for a particular trial
 %Remember we assume each frame will only be used once
@@ -158,16 +170,15 @@ Lsample=50;
 %Extract params
 %CAREFUL WIRING THIS UP
 
-Lpre=paramCell{1};
-Lpost=paramCell{2};
 
-Ltest=Lsample+Lpre+Lpost;
+
+offset=paramCell{1};
 
 %Pick target area
 [Stest Sfalse]=pickSeparateSamples(g.frames, Ltest);
 source=randi(2);
 %Pick start point within sample
-sampleOffset=Lpre;
+sampleOffset=offset
 YN=randi(2);
 
 switch YN
@@ -183,8 +194,7 @@ if ~g.sim
     trialParams.startBQ=EnqueueFrames(0,Stest,Ltest,neg,direction,sampleRate,angle,location,chrom);
 end
 %xpt-specific
-trialParams.Lpre=Lpre;
-trialParams.Lpost=Lpost;
+
 trialParams.YN=YN;
 trialParams.Stest=Stest;
 trialParams.Sfalse=Sfalse;
@@ -192,6 +202,7 @@ trialParams.Ssample=Ssample;
 trialParams.source=source;
 trialParams.Lsample=Lsample;
 trialParams.Ltest=Ltest;
+trialParams.offset=offset;
 %Common
 trialParams;
 end
@@ -204,8 +215,6 @@ if ~g.sim
 trialParams.startAQ=0;
 trialParams.startBQ=0;
 end
-trialParams.Lpre=0;
-trialParams.Lpost=0;
 trialParams.YN=0;
 trialParams.Stest=0;
 trialParams.Sfalse=0;
@@ -213,10 +222,17 @@ trialParams.Ssample=0;
 trialParams.source=0;
 trialParams.Lsample=0;
 trialParams.Ltest=0;
+trialParams.offset=0;
 
 end
 
+
+
 function [tp]=fireTrial(tp)
+%Can call with extra argins for training
+%As long as we give the correct struct OUT, it doesn't matter what we get
+%in.
+%So here we need to be able to specify length (tp.length), and position.
 global g;
 neg=0;
 chrom=0;
@@ -225,6 +241,10 @@ length=100;
 direction=0;
 sampleRate=1;
 angle=1;
+
+%Listen to the length if it's present
+
+    
 %Play sample
 firePause(1);
 fixationSpot([0 255 0]);
@@ -250,33 +270,23 @@ elseif g.respSim
     response=randi(2)-1;
     tPress=GetSecs;
 else
-    [response,tPress]=getConfidence();
+    response=getYN();
 end
 flip;
 %Work out answer
 tp.correct=0;
 if tp.YN==1 %yes
-    if response==0 | response==1, tp.correct=0; else tp.correct=1;end
+    if response==0 , tp.correct=0; else tp.correct=1;end
 elseif tp.YN==2 %no
-    if response==0 | response==1,tp.correct=1;else tp.correct=0;end
+    if response==0,tp.correct=1;else tp.correct=0;end
 end
 
-tp.response=response;
-if response==0 | response==3
-    tp.certain=1;
-else
-    tp.certain=0;
-end
 
-if ~g.sim
-tp.rt=tPress-t0;
-end
+
 
 if g.sim
-    
         if rand() <0.6
-            tp.correct=1;else tp.correct=0;end
-   
+            tp.correct=1;else tp.correct=0;end  
 end
 
 %Remember to use tp.correct not correct
@@ -1200,9 +1210,8 @@ global g;
 
 params=g.params;
 
-
-blockReps=10; %Number of repetitions of each style of block
-conditionReps=60; %Number of repetitions of each condition. Must be divisible by blockReps
+blockReps=g.blockReps;
+conditionReps=g.conditionReps;
 conditionRepsPerBlock=conditionReps/blockReps;
 
 if mod(conditionReps,blockReps)
@@ -1373,4 +1382,7 @@ if ~isdir(d)
 end
 
 end
+
+
+
 
