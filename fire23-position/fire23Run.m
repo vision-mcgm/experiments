@@ -5,7 +5,7 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -95,6 +95,7 @@ for i=1:nTraining
     trainingParamsArray=fireScheduleTrial(trainingParamsCell,50,100);
     CacheN(151);
     tps=fireTrial(trainingParamsArray);
+    resps(i)=tps.correct;
     a2=mean(resps(max(1,end-nWindow):end));
     fireTextWait(['Accuracy: ' num2str(a2)]);
 end
