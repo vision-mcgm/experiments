@@ -5,7 +5,7 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=0;
+g.respSim=1;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -178,7 +178,7 @@ offset=paramCell{1};
 [Stest Sfalse]=pickSeparateSamples(g.frames, Ltest);
 source=randi(2);
 %Pick start point within sample
-sampleOffset=offset
+sampleOffset=offset;
 YN=randi(2);
 
 switch YN
@@ -229,7 +229,7 @@ end
 
 
 function [tp]=fireTrial(tp)
-%Can call with extra argins for training
+
 %As long as we give the correct struct OUT, it doesn't matter what we get
 %in.
 %So here we need to be able to specify length (tp.length), and position.
@@ -280,9 +280,6 @@ if tp.YN==1 %yes
 elseif tp.YN==2 %no
     if response==0,tp.correct=1;else tp.correct=0;end
 end
-
-
-
 
 if g.sim
         if rand() <0.6
@@ -967,11 +964,13 @@ end
 
 function fireTextConfirm(s)
 global g;
+if ~g.respSim
 if ~g.sim
     DrawFormattedText(g.window,s,'center','center',g.textColour)
     Screen('Flip',g.window);
     fKbWait;
     pause(1);
+end
 end
 end
 
