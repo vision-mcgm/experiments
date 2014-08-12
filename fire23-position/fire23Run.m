@@ -5,7 +5,7 @@ clear all;
 global g;
 
 g.sim=0; %Simulate the run, not loading textures
-g.respSim=1;
+g.respSim=0;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -58,7 +58,7 @@ g.FramesInVM=0;
 
 g.nQ=1;
 
-RunTraining();
+%RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
 RunExperiment();
@@ -73,22 +73,22 @@ function RunTraining()
 global g;
  nWindow=10;
 %Training with constant length
-fireTextConfirm('Ready to start training part A.\nHit any key to start.');
-nTraining=20;
-
-trainingParamsCell{1}=0; %offset
-for i=1:nTraining
-    trainingParamsArray=fireScheduleTrial(trainingParamsCell,50,50);
-    CacheN(101);
-    tps=fireTrial(trainingParamsArray);
-    resps(i)=tps.correct;
-    a=mean(resps(max(1,end-nWindow):end));
-    fireTextWait(['Accuracy: ' num2str(a)]);
-end
-
-%Training with variable length
-clear resps
-fireTextConfirm(['Accuracy: ' num2str(a) '\nReady to start training part B.\nHit any key to start.']);
+% fireTextConfirm('Ready to start training part A.\nHit any key to start.');
+% nTraining=20;
+% 
+% trainingParamsCell{1}=0; %offset
+% for i=1:nTraining
+%     trainingParamsArray=fireScheduleTrial(trainingParamsCell,50,50);
+%     CacheN(101);
+%     tps=fireTrial(trainingParamsArray);
+%     resps(i)=tps.correct;
+%     a=mean(resps(max(1,end-nWindow):end));
+%     fireTextWait(['Accuracy: ' num2str(a)]);
+% end
+% 
+% %Training with variable length
+% clear resps
+%fireTextConfirm(['Accuracy: ' num2str(a) '\nReady to start training part B.\nHit any key to start.']);
 trainingParamsCell{1}=50; %offset
 nTraining=20;
 for i=1:nTraining
