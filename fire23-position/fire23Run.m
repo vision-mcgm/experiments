@@ -13,8 +13,7 @@ g.pause=1;
 g.smallPause=0.5;
 g.fireFolder='..\..\cropped_20-24mins\normal\';
 g.videoFolder='../../cropped_20-24mins/'
-g.monitor=2; %1 for monitor with start bar
-g.offset=200;
+g.monitor=2; %1 for monitor with start bar8g.offset=200;
 g.frames=10000; %Number of frames to load in total
 g.cropRect=[291 38 640 563]; %The rectangle of interest loaded from the images - x y length height
 g.textColour=[0 0 0];
@@ -58,7 +57,7 @@ g.FramesInVM=0;
 
 g.nQ=1;
 
-%RunTraining();
+RunTraining();
 
 ScheduleExperiment(); %Get the trial scheduling
 RunExperiment();

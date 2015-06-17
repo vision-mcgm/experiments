@@ -4,6 +4,7 @@ function [ ] = fire23Run()
 clear all;
 global g;
 
+oldEnableFlag = Screen('Preference', 'SuppressAllWarnings', 0);
 g.sim=0; %Simulate the run, not loading textures
 g.respSim=0;
 g.debugMode=0; %Debug mode
@@ -13,7 +14,7 @@ g.pause=1;
 g.smallPause=0.5;
 g.fireFolder='..\..\cropped_20-24mins\normal\';
 g.videoFolder='../../cropped_20-24mins/'
-g.monitor=1; %1 for monitor with start bar
+g.monitor=2; %1 for monitor with start bar
 g.offset=200;
 g.frames=10000; %Number of frames to load in total
 g.cropRect=[291 38 640 563]; %The rectangle of interest loaded from the images - x y length height
@@ -50,24 +51,201 @@ g.conditionReps=50; %Number of repetitions of each condition. Must be divisible 
 
 InitialiseFramework();
 InitialiseExperiment();
-%ShowCursor;
+ShowCursor;
 
-
+Screen('Preference', 'TextAntiAliasing', 1);
 g.nextFrI=1;
 g.FramesInVM=0;
 
 g.nQ=1;
+Screen(g.window,'BlendFunction',GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+setupExperiment();
 %RunTraining();
 
-ScheduleExperiment(); %Get the trial scheduling
+%ScheduleExperiment(); %Get the trial scheduling
 %RunExperiment();
 %exitExperiment();
+keyboard
+
 end
 
 %END EXPERIMENT CODE
 
 %----------------------------------------------------BEGIN PROJECT SPECIFIC HELPER FUNCTIONS
+
+function setupExperiment()
+global g;
+ gratingsize = 400;
+ drawmask=1;
+f=0.05;
+cyclespersecond=1;
+g.angle=30;
+movieDurationSecs=20; 
+texsize=gratingsize / 2;
+g.white=WhiteIndex(g.monitor);
+white=g.white;
+black=BlackIndex(g.monitor);
+gray=round((white+black)/2);
+inc=white-gray;
+% Round gray to integral number, to avoid roundoff artifacts with some
+% graphics cards:
+g.gray=round((white+black)/2);
+gray=g.gray;
+g.p=ceil(1/f);
+fr=f*2*pi;
+g.visiblesize=2*texsize+1;
+x = meshgrid(-texsize:texsize + g.p, 1);
+grating=gray + inc*cos(fr*x);
+g.gratingtex=Screen('MakeTexture', g.window, grating);
+mask=ones(2*texsize+1, 2*texsize+1, 2) * gray;
+[x,y]=meshgrid(-1*texsize:1*texsize,-1*texsize:1*texsize);
+mask(:, :, 2)=white * (1 - exp(-((x/90).^2)-((y/90).^2)));
+g.masktex=Screen('MakeTexture', g.window, mask);
+g.dstRect=[0 0 g.visiblesize g.visiblesize];
+g.dstRect=CenterRect(g.dstRect, g.windowRect);
+g.dstRect(1)=g.dstRect(1)+200;
+g.dstRect(3)=g.dstRect(3)+200;
+ifi=Screen('GetFlipInterval', g.window);
+waitframes = 1;
+g.waitduration = waitframes * ifi;
+g.p=1/f;  % pixels/cycle  
+g.shiftperframe= cyclespersecond * g.p * g.waitduration;
+
+end
+
+function playCircle()
+ global g;
+n=200;
+
+limit=200;
+go=1;
+
+deltas=zeros(1000,1);
+patchx=100;
+patchy=100;
+texsize=50;
+
+%Make mask
+mask=ones(patchy, patchx, 2) * g.gray;
+[x,y]=meshgrid(-1*texsize:1*texsize-1,-1*texsize:1*texsize-1);
+mask=g.white * (1 - exp(-((x/90).^2)-((y/90).^2)));
+
+for pi=1:patchx
+    for pj=1:patchy
+        d=sqrt((pi-50)^2 + (pj-50)^2)/50;
+        mask(pi,pj)=d;
+        mask(pi,pj)=round(255*(1-d));
+        
+    end
+end
+mask(mask>255)=255;
+
+for i=1:limit
+    
+        imPath=[g.fireFolder 'frame' num2str(i,g.decSpec) '.bmp'];
+    im=imread(imPath);
+    starty=300;
+    startx=300;
+    im=im(starty:starty+99,startx:startx+99,:);
+% transTex=uint8(zeros(100,100,4));
+% transTex(:,:,1:3)=im(100:199,100:199,:);
+% transTex(:,:,:,4)=64;
+im2=uint8(zeros(100,100,4));
+im2(:,:,1:3)=im;
+
+
+
+
+
+
+
+
+im2(:,:,4)=mask;
+
+% im3=uint8(zeros(564,641,4));
+% im3(:,:,1:3)=im;
+% im3(:,:,4)=mask;
+
+offset=200;
+
+fireCentreX=g.centreX;
+gratingCentreX=g.centreX;
+texes(i)=Screen('MakeTexture',g.window,im2);
+
+message(['Loading ' num2str(i)]);
+flip();
+end
+    
+    
+    i=1;
+    shift=0;
+while go
+    
+    
+   
+%Frame number,
+
+
+fs=200;
+frame=mod(i,limit-1)+1;%Goes from 1 to limit-1 so that we don't index by zero
+rect=[g.centreX-(g.w/2)-g.offset-fs g.centreY-(g.h/2) g.centreX+(g.w/2)-g.offset-fs g.centreY+(g.h/2)]; 
+Screen('DrawTexture', g.window, texes(frame),[],rect,0);
+
+%Draw the circle
+shift=shift+g.shiftperframe;
+ xoffset = mod(shift,g.p);
+      
+      g.srcRect=[xoffset 0 xoffset+g.visiblesize g.visiblesize];  
+Screen('DrawTexture', g.window, g.gratingtex, g.srcRect, g.dstRect, g.angle);
+ % Draw gaussian mask over grating:
+ Screen('DrawTexture', g.window, g.masktex, [0 0 g.visiblesize g.visiblesize], g.dstRect, g.angle);
+           
+info(g.angle,g.shiftperframe);
+g.angleInc=1;
+g.shiftperframeinc=0.005;
+
+[VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos]=Screen('Flip',g.window);
+if i>1
+    delta=VBLTimestamp-lastVBLTimestamp;
+    deltas(i-1)=delta;
+end
+lastVBLTimestamp=VBLTimestamp;
+
+%Check for keypresses
+checkList=zeros(1,256);
+checkList([37,38,39,40])=1;
+[keyIsDown,secs,keyCode]=PsychHID('KbCheck',[],checkList);
+
+
+ if keyCode(37) g.angle=g.angle-g.angleInc; end
+ if keyCode(38) g.shiftperframe=g.shiftperframe+g.shiftperframeinc; end
+ if keyCode(39) g.angle=g.angle+g.angleInc; end
+ if keyCode(40) g.shiftperframe=g.shiftperframe-g.shiftperframeinc; end
+ 
+ 
+ g.angle=mod(g.angle,360); 
+ if g.shiftperframe<0 g.shiftperframe =0;end
+
+ 
+ i=i+1;
+end
+end
+
+
+
+function info(angle,speed)
+global g;
+text=['a: ' num2str(angle) ' s: ' num2str(speed)];
+Screen('DrawText',g.window,text,100,100);
+
+end
+
+function message(text)
+global g;
+
+Screen('DrawText',g.window,text,100,100);
+end
 
 function RunTraining()
 global g;
@@ -848,16 +1026,25 @@ if ~g.sim
     
     Screen('Preference', 'SkipSyncTests', 1)
     
+    g.white=WhiteIndex(g.monitor);
+white=g.white;
+black=BlackIndex(g.monitor);
+gray=round((white+black)/2);
+inc=white-gray;
+% Round gray to integral number, to avoid roundoff artifacts with some
+% graphics cards:
+g.gray=round((white+black)/2);
+    
     screens=Screen('Screens');
     screenNumber=max(screens);
     screenNumber=min(screenNumber,g.monitor);
     if g.debugMode
         %  [g.window,windowRect]=Screen(screenNumber,'OpenWindow',0,[20 20 800 800],[],2);
         % [g.window,g.windowRect]=Screen(screenNumber,'OpenWindow',[127.5 127.5 127.5],[20 20 800 800],[],2);
-        [g.window,g.windowRect]=PsychImaging('OpenWindow',screenNumber,128,[20 20 800 800]);
+        [g.window,g.windowRect]=PsychImaging('OpenWindow',screenNumber,g.gray,[20 20 800 800]);
     else
         % [g.window,g.windowRect]=Screen(screenNumber,'OpenWindow',[127.5 127.5 127.5],[],[],2);
-        [g.window,g.windowRect]=PsychImaging('OpenWindow',screenNumber,128);
+        [g.window,g.windowRect]=PsychImaging('OpenWindow',screenNumber,g.gray);
     end
     
     %pixelSize=Screen('PixelSize', windowPtrOrScreenNumber);
@@ -865,8 +1052,8 @@ if ~g.sim
     g.centreY=(g.windowRect(4)+g.windowRect(2))/2;
     g.black=BlackIndex(g.window);
     white = WhiteIndex(g.window);  % Retrieves the CLUT color code for white.
-    g.grey = (g.black + white) / 2;
-    Screen('FillRect',g.window,g.grey);
+  %  g.grey = (g.black + white) / 2;
+    Screen('FillRect',g.window,g.gray);
 end
 %Screen('BlendFunction',g.window,GL_ONE,GL_ZERO);
 HideCursor;
