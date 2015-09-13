@@ -1,12 +1,15 @@
-function [ ] = fire23Run()
-%Backwards detection over sampling rates
+function [ ] = fire24Run()
+%Motion direction detection
 %Parameters
-clear all;
+
 global g;
+
+g.askForSubjectName=1;
 
 oldEnableFlag = Screen('Preference', 'SuppressAllWarnings', 0);
 g.sim=0; %Simulate the run, not loading textures
 g.respSim=0;
+g.showDBInfo=0;
 g.debugMode=0; %Debug mode
 g.fr=50; %Global maximum frame rate
 g.int=1/g.fr;
@@ -41,10 +44,11 @@ g.maxFramesInVM=500;
 g.intercache=0;
 
 %Parameters
-g.params(1).name='offset';
+g.params(1).name='size';
 g.params(1).type='enum';
-g.params(1).list=[0 10 20 30 40 50 60 70 80 90 100];
+g.params(1).list=[10 20 30 40 50 60 70];
 g.params(1).scheme='inblock';
+
 
 g.blockReps=10; %Number of repetitions of each style of block
 g.conditionReps=50; %Number of repetitions of each condition. Must be divisible by blockReps
@@ -54,6 +58,8 @@ InitialiseExperiment();
 ShowCursor;
 
 Screen('Preference', 'TextAntiAliasing', 1);
+%ListenChar(2); %Stop input to command window
+%ListenChar(0)); %To reenable
 g.nextFrI=1;
 g.FramesInVM=0;
 
@@ -63,8 +69,8 @@ Screen(g.window,'BlendFunction',GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 setupExperiment();
 %RunTraining();
 
-%ScheduleExperiment(); %Get the trial scheduling
-%RunExperiment();
+ScheduleExperiment(); %Get the trial scheduling
+RunExperiment();
 %exitExperiment();
 keyboard
 
@@ -76,12 +82,12 @@ end
 
 function setupExperiment()
 global g;
- gratingsize = 400;
- drawmask=1;
+gratingsize = 400;
+drawmask=1;
 f=0.05;
 cyclespersecond=1;
 g.angle=30;
-movieDurationSecs=20; 
+movieDurationSecs=20;
 texsize=gratingsize / 2;
 g.white=WhiteIndex(g.monitor);
 white=g.white;
@@ -100,31 +106,38 @@ grating=gray + inc*cos(fr*x);
 g.gratingtex=Screen('MakeTexture', g.window, grating);
 mask=ones(2*texsize+1, 2*texsize+1, 2) * gray;
 [x,y]=meshgrid(-1*texsize:1*texsize,-1*texsize:1*texsize);
-mask(:, :, 2)=white * (1 - exp(-((x/90).^2)-((y/90).^2)));
+mask(:, :, 2)=white * (1 - exp(-((x/50).^2)-((y/50).^2)));
 g.masktex=Screen('MakeTexture', g.window, mask);
 g.dstRect=[0 0 g.visiblesize g.visiblesize];
 g.dstRect=CenterRect(g.dstRect, g.windowRect);
-g.dstRect(1)=g.dstRect(1)+200;
-g.dstRect(3)=g.dstRect(3)+200;
+g.dstRect(1)=g.dstRect(1)+gratingsize/2;
+g.dstRect(3)=g.dstRect(3)+gratingsize/2;
 ifi=Screen('GetFlipInterval', g.window);
 waitframes = 1;
 g.waitduration = waitframes * ifi;
-g.p=1/f;  % pixels/cycle  
+g.p=1/f;  % pixels/cycle
 g.shiftperframe= cyclespersecond * g.p * g.waitduration;
 
 end
 
-function playCircle()
- global g;
+function trialParams = playCircle(fireAngle,fsize)
+global g;
+
+g.angle=randi(360)-1;
+g.shiftperframe=1;
+
+triamParals.initAngle=g.angle;
+trialParams.initSpeed=g.shiftperframe;
+
 n=200;
 
 limit=200;
 go=1;
 
 deltas=zeros(1000,1);
-patchx=100;
-patchy=100;
-texsize=50;
+patchx=fsize;
+patchy=fsize;
+texsize=fsize/2;
 
 %Make mask
 mask=ones(patchy, patchx, 2) * g.gray;
@@ -133,7 +146,7 @@ mask=g.white * (1 - exp(-((x/90).^2)-((y/90).^2)));
 
 for pi=1:patchx
     for pj=1:patchy
-        d=sqrt((pi-50)^2 + (pj-50)^2)/50;
+        d=sqrt((pi-texsize)^2 + (pj-texsize)^2)/texsize;
         mask(pi,pj)=d;
         mask(pi,pj)=round(255*(1-d));
         
@@ -141,115 +154,118 @@ for pi=1:patchx
 end
 mask(mask>255)=255;
 
+
+startFrame=randi(5000);
 for i=1:limit
+    i
     
-        imPath=[g.fireFolder 'frame' num2str(i,g.decSpec) '.bmp'];
+    imPath=[g.fireFolder 'frame' num2str(i+startFrame,g.decSpec) '.bmp'];
     im=imread(imPath);
-    starty=300;
-    startx=300;
-    im=im(starty:starty+99,startx:startx+99,:);
-% transTex=uint8(zeros(100,100,4));
-% transTex(:,:,1:3)=im(100:199,100:199,:);
-% transTex(:,:,:,4)=64;
-im2=uint8(zeros(100,100,4));
-im2(:,:,1:3)=im;
-
-
-
-
-
-
-
-
-im2(:,:,4)=mask;
-
-% im3=uint8(zeros(564,641,4));
-% im3(:,:,1:3)=im;
-% im3(:,:,4)=mask;
-
-offset=200;
-
-fireCentreX=g.centreX;
-gratingCentreX=g.centreX;
-texes(i)=Screen('MakeTexture',g.window,im2);
-
-message(['Loading ' num2str(i)]);
-flip();
+    fireCentrey=210;
+    fireCentrex=326;
+    im=im(fireCentrey-fsize/2:fireCentrey+fsize/2-1,fireCentrex-fsize/2:fireCentrex+fsize/2-1,:);
+    
+    im2=uint8(zeros(fsize,fsize,4));
+    im2(:,:,1:3)=im;
+    
+    im2(:,:,4)=mask;
+    offset=200;   
+    fireCentreX=g.centreX;
+    gratingCentreX=g.centreX;
+    texes(i)=Screen('MakeTexture',g.window,im2);
+    
+    message(['Loading ' num2str(i)]);
+    messageLow(['Block ' num2str(g.b) ', trial ' num2str(g.tInBlock) '.']);
+    flip();
 end
-    
-    
-    i=1;
-    shift=0;
+
+
+i=1;
+shift=0;
 while go
+    ListenChar(2);
+ %Frame number,
+  fs=fsize;
+    frame=mod(i,limit-1)+1;%Goes from 1 to limit-1 so that we don't index by zero
+    rect=[g.centreX-g.offset-fs/2 g.centreY-fs/2 g.centreX-g.offset+fs/2 g.centreY+fs/2];
+    Screen('DrawTexture', g.window, texes(frame),[],rect,fireAngle);
+    
+    %Draw the circle
+    shift=shift+g.shiftperframe;
+    xoffset = mod(shift,g.p);
+    
+    g.srcRect=[xoffset 0 xoffset+g.visiblesize g.visiblesize];
+    Screen('DrawTexture', g.window, g.gratingtex, g.srcRect, g.dstRect, mod(g.angle+90,360));
+    % Draw gaussian mask over grating:
+    Screen('DrawTexture', g.window, g.masktex, [0 0 g.visiblesize g.visiblesize], g.dstRect, g.angle);
+    
+    info(fsize,fireAngle,g.angle,g.shiftperframe);
+    g.angleInc=1;
+    g.shiftperframeinc=0.005;
+    
+    [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos]=Screen('Flip',g.window);
+    if i>1
+        delta=VBLTimestamp-lastVBLTimestamp;
+        deltas(i-1)=delta;
+    end
+    lastVBLTimestamp=VBLTimestamp;
+    
+    %Check for keypresses
+    checkList=zeros(1,256);
+    checkList([13,37,38,39,40])=1;
+    [keyIsDown,secs,keyCode]=PsychHID('KbCheck',[],checkList);
     
     
-   
-%Frame number,
-
-
-fs=200;
-frame=mod(i,limit-1)+1;%Goes from 1 to limit-1 so that we don't index by zero
-rect=[g.centreX-(g.w/2)-g.offset-fs g.centreY-(g.h/2) g.centreX+(g.w/2)-g.offset-fs g.centreY+(g.h/2)]; 
-Screen('DrawTexture', g.window, texes(frame),[],rect,0);
-
-%Draw the circle
-shift=shift+g.shiftperframe;
- xoffset = mod(shift,g.p);
-      
-      g.srcRect=[xoffset 0 xoffset+g.visiblesize g.visiblesize];  
-Screen('DrawTexture', g.window, g.gratingtex, g.srcRect, g.dstRect, g.angle);
- % Draw gaussian mask over grating:
- Screen('DrawTexture', g.window, g.masktex, [0 0 g.visiblesize g.visiblesize], g.dstRect, g.angle);
-           
-info(g.angle,g.shiftperframe);
-g.angleInc=1;
-g.shiftperframeinc=0.005;
-
-[VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos]=Screen('Flip',g.window);
-if i>1
-    delta=VBLTimestamp-lastVBLTimestamp;
-    deltas(i-1)=delta;
+    if keyCode(37) g.angle=g.angle-g.angleInc; end
+    if keyCode(38) g.shiftperframe=g.shiftperframe+g.shiftperframeinc; end
+    if keyCode(39) g.angle=g.angle+g.angleInc; end
+    if keyCode(40) g.shiftperframe=g.shiftperframe-g.shiftperframeinc; end
+    if keyCode(13) go=0; ListenChar(0); end
+    
+    
+    g.angle=mod(g.angle,360);
+    if g.shiftperframe<0 g.shiftperframe =0;end
+    
+    if g.respSim && i>200
+        go=0;
+       ListenChar(0);
+    end
+    
+    i=i+1;
 end
-lastVBLTimestamp=VBLTimestamp;
 
-%Check for keypresses
-checkList=zeros(1,256);
-checkList([37,38,39,40])=1;
-[keyIsDown,secs,keyCode]=PsychHID('KbCheck',[],checkList);
-
-
- if keyCode(37) g.angle=g.angle-g.angleInc; end
- if keyCode(38) g.shiftperframe=g.shiftperframe+g.shiftperframeinc; end
- if keyCode(39) g.angle=g.angle+g.angleInc; end
- if keyCode(40) g.shiftperframe=g.shiftperframe-g.shiftperframeinc; end
- 
- 
- g.angle=mod(g.angle,360); 
- if g.shiftperframe<0 g.shiftperframe =0;end
-
- 
- i=i+1;
-end
+trialParams.fireAngle=fireAngle;
+trialParams.judgedSpeed=g.shiftperframe;
+trialParams.judgedAngle=g.angle;
+trialParams.fireSize=fsize;
+trialParams.startFrame=startFrame;
 end
 
 
 
-function info(angle,speed)
+function info(fsize,realAngle,angle,speed)
 global g;
-text=['a: ' num2str(angle) ' s: ' num2str(speed)];
+if g.showDBInfo
+text=['fs: ' num2str(fsize) ' o: ' num2str(realAngle)  ' a: ' num2str(angle) ' s: ' num2str(speed)];
 Screen('DrawText',g.window,text,100,100);
+end
 
+end
+
+function messageLow(text)
+global g;
+Screen('DrawText',g.window,text,100,200);
 end
 
 function message(text)
 global g;
-
 Screen('DrawText',g.window,text,100,100);
+
 end
 
 function RunTraining()
 global g;
- nWindow=10;
+nWindow=10;
 %Training with constant length
 fireTextConfirm('Ready to start training part A.\nHit any key to start.');
 nTraining=20;
@@ -265,7 +281,7 @@ for i=1:nTraining
 end
 
 %Training with variable length
-clear resps
+
 fireTextConfirm(['Accuracy: ' num2str(a) '\nReady to start training part B.\nHit any key to start.']);
 trainingParamsCell{1}=50; %offset
 nTraining=20;
@@ -292,38 +308,37 @@ global g;
 
 
 [allTrialParams blockParamCells g.info g.design]=fireReadParams();
- cg.allTrialParamsArray(1400)=fireFakeScheduleTrial();
 
-for i=1:g.info.nTrials
-    i
-    g.allTrialParamsArray(i)=fireScheduleTrial(allTrialParams(i,:),50,100);
-    if i==1
-         g.allTrialParamsArray(g.info.nTrials)= g.allTrialParamsArray(1);
-    end
-end
+
+g.allTrialParams=allTrialParams;
 end
 
 function RunExperiment
 global g;
-makeSureAtLeastN(200);
+
 trial=1;
 g.feedback=0;
 g.training=0;
 
 for b=1:g.info.nBlocks
     fireTextConfirm(['Block ' num2str(b) ' of ' num2str(g.info.nBlocks) ' is about to start.\nHit any key to begin.']);
+    g.b=b;
     for tInBlock=1:g.info.nTrialsPerBlock
-        fprintf('%d %d %d\n');
+        g.tInBlock=tInBlock;
+       
+       
         tstart=now;
-        thisTrialParams=fireTrial(g.allTrialParamsArray(trial));
-
-thisTrialParams.block=b;
+        
+        thisTrialParams=playCircle(randi(360)-1,g.allTrialParams{trial});
+        
+        thisTrialParams.block=b;
         thisTrialParams.tend=now;
         thisTrialParams.tstart=tstart;
         tps(trial)=thisTrialParams;
         respSave(tps);
         trial=trial+1
         makeSureAtLeastN(500);
+        
     end
     fireTextConfirm(['You have finished block ' num2str(b) ' of ' num2str(g.info.nBlocks) '.\nPlease have a short break, then hit any key to continue.']);
 end
@@ -333,47 +348,14 @@ fireTextConfirm(['Experiment over. Thanks! \nPlease alert the experimenter.']);
 end
 
 
-function trialParams=fireScheduleTrial(paramCell,Lsample,Ltest)
+function trialParams=fireScheduleTrial(paramCell)
 %Varargin: Lsample, Ltest
 %Matlab treats a passed cell array as multiple functions
 %Loads frames into the video queue for a particular trial
 %Remember we assume each frame will only be used once
 global g;
 %Leftover vars
-neg=0;
-chrom=0;
-location=3;
-direction=0;
-sampleRate=1;
-angle=1;
-Lsample=50;
-%Extract params
-%CAREFUL WIRING THIS UP
 
-
-
-offset=paramCell{1};
-
-%Pick target area
-[Stest Sfalse]=pickSeparateSamples(g.frames, Ltest);
-source=randi(2);
-%Pick start point within sample
-sampleOffset=offset;
-YN=randi(2);
-
-switch YN
-    case 1 %Yes
-        Ssample=sampleOffset+Stest
-    case 2 %No
-        Ssample=sampleOffset+Sfalse;
-end
-
-%Copy params to tp
-if ~g.sim
-    trialParams.startAQ=EnqueueFrames(0,Ssample,Lsample,neg,direction,sampleRate,angle,location,chrom);
-    trialParams.startBQ=EnqueueFrames(0,Stest,Ltest,neg,direction,sampleRate,angle,location,chrom);
-end
-%xpt-specific
 
 trialParams.YN=YN;
 trialParams.Stest=Stest;
@@ -392,8 +374,8 @@ function trialParams=fireFakeScheduleTrial()
 %Makes a fake trial params structure so that we can preallocate the array
 global g;
 if ~g.sim
-trialParams.startAQ=0;
-trialParams.startBQ=0;
+    trialParams.startAQ=0;
+    trialParams.startBQ=0;
 end
 trialParams.YN=0;
 trialParams.Stest=0;
@@ -424,7 +406,7 @@ angle=1;
 
 %Listen to the length if it's present
 
-    
+
 %Play sample
 firePause(1);
 fixationSpot([0 255 0]);
@@ -439,7 +421,7 @@ if ~g.sim
     
     playClip(tp.startBQ,tp.Ltest,neg,direction,sampleRate,angle,location,chrom);
     t0=GetSecs;
-        fixationSpot([0 0 255]);
+    fixationSpot([0 0 255]);
 end
 
 %Get response
@@ -462,8 +444,8 @@ elseif tp.YN==2 %no
 end
 
 if g.sim
-        if rand() <0.6
-            tp.correct=1;else tp.correct=0;end  
+    if rand() <0.6
+        tp.correct=1;else tp.correct=0;end
 end
 
 %Remember to use tp.correct not correct
@@ -544,7 +526,7 @@ for i=1:n
     fireTextWait([ answer 'Accuracy: ' num2str(sum(corrects)/i)]);
     %fireText([ answer ]);
 end
-clear corrects
+
 
 end
 
@@ -601,7 +583,7 @@ if ~g.sim
         return
     end
     
-    clear timestamps
+    
     fList=0:length-1;
     fList=interval.*floor(fList/interval);
     
@@ -745,10 +727,10 @@ if chromatic
 else
     if f==0
         imPath=[g.fireFolder 'frame' num2str(n,g.decSpec) '.bmp'];
-    im=imread(imPath);
+        im=imread(imPath);
     else
-    imPath=[g.folderList{f} 'frame' num2str(n,g.decSpec) '.bmp'];
-    im=imread(imPath);
+        imPath=[g.folderList{f} 'frame' num2str(n,g.decSpec) '.bmp'];
+        im=imread(imPath);
     end
 end
 if g.resize
@@ -772,7 +754,7 @@ if g.sim
     return
 end
 
-clear timestamps
+
 fList=0:length-1;
 fList=interval.*floor(fList/interval);
 
@@ -836,7 +818,7 @@ if g.sim
     return
 end
 Priority(2);
-clear timestamps
+
 fList=0:length-1;
 fList=interval.*floor(fList/interval);
 
@@ -983,7 +965,7 @@ g.trial=1;
 
 g.training=1;
 if g.sim, g.pause=0; g.smallPause=0; end
-if ~g.debugMode
+if ~g.debugMode && g.askForSubjectName
     g.subjectName=input('Enter subject initials: ','s');
 else
     g.subjectName='test';
@@ -997,6 +979,7 @@ g.vlogFileID=fopen(['output\' g.vlogFileName],'w');
 fireLog(['Starting experiment on subject ' g.subjectName]);
 g.responseFileName=[g.subjectName '_results.txt'];
 g.responseMatFileName=['output\' g.subjectName '_results.mat'];
+g.responseMatFileNameNoExtension=['output\' g.subjectName '_results'];
 g.responseFileID=fopen([ 'output\' g.responseFileName],'w');
 g.FrameNumsQ=zeros(1,2000);
 g.fQ=zeros(1,2000);
@@ -1027,13 +1010,13 @@ if ~g.sim
     Screen('Preference', 'SkipSyncTests', 1)
     
     g.white=WhiteIndex(g.monitor);
-white=g.white;
-black=BlackIndex(g.monitor);
-gray=round((white+black)/2);
-inc=white-gray;
-% Round gray to integral number, to avoid roundoff artifacts with some
-% graphics cards:
-g.gray=round((white+black)/2);
+    white=g.white;
+    black=BlackIndex(g.monitor);
+    gray=round((white+black)/2);
+    inc=white-gray;
+    % Round gray to integral number, to avoid roundoff artifacts with some
+    % graphics cards:
+    g.gray=round((white+black)/2);
     
     screens=Screen('Screens');
     screenNumber=max(screens);
@@ -1052,7 +1035,7 @@ g.gray=round((white+black)/2);
     g.centreY=(g.windowRect(4)+g.windowRect(2))/2;
     g.black=BlackIndex(g.window);
     white = WhiteIndex(g.window);  % Retrieves the CLUT color code for white.
-  %  g.grey = (g.black + white) / 2;
+    %  g.grey = (g.black + white) / 2;
     Screen('FillRect',g.window,g.gray);
 end
 %Screen('BlendFunction',g.window,GL_ONE,GL_ZERO);
@@ -1130,6 +1113,8 @@ function respSave(trialParams)
 global g;
 design=g.design;
 save([g.responseMatFileName],'trialParams','design');
+t=tic;
+save([g.responseMatFileNameNoExtension num2str(t) '.mat'],'trialParams','design');
 end
 
 function fireText(s)
@@ -1154,12 +1139,12 @@ end
 function fireTextConfirm(s)
 global g;
 if ~g.respSim
-if ~g.sim
-    DrawFormattedText(g.window,s,'center','center',g.textColour)
-    Screen('Flip',g.window);
-    fKbWait;
-    pause(1);
-end
+    if ~g.sim
+        DrawFormattedText(g.window,s,'center','center',g.textColour)
+        Screen('Flip',g.window);
+        fKbWait;
+        pause(1);
+    end
 end
 end
 
